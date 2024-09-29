@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "caiman"
+version = "0.1.0"
+description = "A build system for MicroPython projects"
+authors = ["Andrei Dumitrache <andrei@dumitrache.net>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+mpremote = "^1.22.0"
+mpy-cross-v6 = "^1.0.1"
+pyaml = "^23.12.0"
+dacite = "^1.8.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+
+[tool.poetry.scripts]
+caiman = "caiman.run:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

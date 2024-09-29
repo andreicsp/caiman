@@ -1,0 +1,30 @@
+version: 0.0.1
+device:
+  port: ''
+firmware:
+  name: LoRaNet
+  version: 0.0.1
+  author: Andrei Dumitrache
+workspace:
+  build: build/micropython
+  sources: micropython
+  packages: venv/mip-packages
+  tools: build-tools
+  plugins: []
+  ignores:
+  - .git
+  - .vscode
+  - '**/__pycache__'
+  - '**/*.pyc'
+channels:
+- name: micropython
+  index: https://micropython.org/pi/v2
+sources: 
+- path: .
+  target: /
+  compile: true
+dependencies:
+- name: logging
+  version: latest
+resources: []
+tools: []

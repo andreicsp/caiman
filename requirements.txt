@@ -1,0 +1,4 @@
+mpremote
+mpy-cross-v6
+pyaml
+dacite
