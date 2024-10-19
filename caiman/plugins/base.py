@@ -6,6 +6,9 @@ import dataclasses
 
 
 class Goal(ABC):
+    def __init__(self, config: Config):
+        self.config = config
+
     @property
     @abstractmethod
     def help(self):

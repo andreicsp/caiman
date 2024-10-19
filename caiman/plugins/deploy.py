@@ -35,9 +35,9 @@ class DeployGoal(Goal):
         return DeployCommand
 
     def __call__(self, command: Command):
-        paths = Path(self.config.workspace.build).glob("*")
+        paths = Path(self.config.workspace.python_build).glob("*")
         for path in paths:
-            firmware_target = path.relative_to(self.config.workspace.build)
+            firmware_target = path.relative_to(self.config.workspace.python_build)
             firmware_target = firmware_target.relative_to("/") if firmware_target.is_absolute() else firmware_target
             if path.is_dir():
                 firmware_target = firmware_target.parent
@@ -46,8 +46,8 @@ class DeployGoal(Goal):
             _logger.info(f"Uploading {path} to {firmware_target}")
 
             firmware_target = "" if firmware_target == "." else firmware_target
-            path = path.relative_to(self.config.workspace.build)
-            self._fs.upload(src=str(path), dst=firmware_target, cwd=self.config.workspace.build)
+            path = path.relative_to(self.config.workspace.python_build)
+            self._fs.upload(src=str(path), dst=firmware_target, cwd=self.config.workspace.python_build)
 
 
 class DeployPlugin(Plugin):

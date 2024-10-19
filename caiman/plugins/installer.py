@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import logging
 import os
 from typing import Union
-from caiman.config import Command, Config, Dependency, Tool
+from caiman.config import Command, Config, Dependency
 from caiman.device.handler import DeviceHandler
 from pathlib import Path
 
@@ -33,7 +33,7 @@ class InstallCommand:
 class InstallGoal(Goal):
     def __init__(self, config: Config, device: DeviceHandler):
         self.config = config
-        self._device = device
+        self.device = device
 
     @property
     def help(self):
@@ -56,10 +56,10 @@ class InstallGoal(Goal):
             'install', f'{name}@{version}'
         ]
 
-        return self._device.run_mp_remote_cmd(*cmd, mount_path=mount_path)
+        return self.device.run_mp_remote_cmd(*cmd, mount_path=mount_path)
 
-    def install(self, dep: Union[Dependency, Tool]):
-        parent = self.config.workspace.tools if isinstance(dep, Tool) else self.config.workspace.packages
+    def install(self, dep: Dependency, scope: str):
+        parent = dep.get_install_root(self.config.workspace)
         channel = self.config.get_channel(dep.channel)
         remote_target = dep.target or '/'
         remote_target = "/remote" + remote_target
@@ -89,26 +89,26 @@ class InstallGoal(Goal):
     def __call__(self, command: Command):
         command = InstallCommand(**command.params)
         if not command.version:
-            fail(f"Dependency version is required. Use the format <package>@<version>")
+            fail("Dependency version is required. Use the format <package>@<version>")
 
         kwargs = dict(name=command.package, version=command.version, target=command.target)
         if command.channel:
             kwargs["channel"] = command.channel
 
-        dep = Dependency(**kwargs) if command.scope != "tools" else Tool(**kwargs)
-        return self.install(dep)
+        dep = Dependency(**kwargs)
+        return self.install(dep, scope=command.scope)
 
 
 class MIPInstallerPlugin(Plugin):
     def __init__(self, config: Config):
         super().__init__(config)
-        self._device = DeviceHandler(config=config)
+        self.device = DeviceHandler(config=config)
 
-    def install(self, dep: Union[Dependency, Tool]):
-        return InstallGoal(config=self.config, device=self._device).install(dep)
+    def install(self, dep: Dependency):
+        return InstallGoal(config=self.config, device=self.device).install(dep)
 
     def get_goals(self):
-        return [InstallGoal(config=self.config, device=self._device)]
+        return [InstallGoal(config=self.config, device=self.device)]
 
 
 
