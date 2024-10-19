@@ -14,7 +14,7 @@ class CorePluginProvider(PluginProvider):
             WorkspacePlugin(config=config),
             ApplicationBuilderPlugin(config=config),
             #DeployPlugin(config=config),
-            #FileSystemPlugin(config=config),
+            FileSystemPlugin(config=config),
             RunnerPlugin(config=config),
             MIPInstallerPlugin(config=config),
         ]

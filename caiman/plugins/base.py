@@ -3,11 +3,13 @@ import sys
 from typing import Tuple, Type
 from caiman.config import Command, Config
 import dataclasses
+import logging
 
 
 class Goal(ABC):
     def __init__(self, config: Config):
         self.config = config
+        self._logger = logging.getLogger(self.__class__.__name__)
 
     @property
     @abstractmethod
@@ -29,6 +31,9 @@ class Goal(ABC):
 
     def fail(self, message):
         fail(f"[{self.name}] {message}")
+
+    def info(self, message):
+        self._logger.info(f"[{self.name}] {message}")
 
 
 class Plugin(ABC):

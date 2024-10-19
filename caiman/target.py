@@ -11,7 +11,7 @@ from pathlib import Path
 import dacite
 from pathspec import PathSpec
 
-from caiman.config import FileSource, Manifest, ManifestItem, Workspace
+from caiman.config import Dependency, FileSource, Manifest, ManifestItem, Workspace
 
 
 @dataclass(frozen=True, eq=True)
@@ -68,16 +68,22 @@ class WorkspaceSource:
         return self.workspace.get_ignore_patterns()
 
     @property
+    def manifest_folder(self) -> Path:
+        """
+        The relative directory for the source manifests."""
+        return self.source.manifest_folder
+
+    @property
     def manifest_root(self) -> Path:
         """
         The root directory for the source manifests."""
-        return self.workspace.get_build_path("manifests") / self.source.manifest_folder
+        return self.workspace.get_build_path("manifests") / self.manifest_folder
 
     @property
     def manifest_path(self) -> Path:
         """
         The path to the source manifest file."""
-        return self.manifest_root / f"{self.source.name}.json"
+        return self.manifest_root / f"{self.source.package_name}.json"
 
     @property
     def source_manifest_items(self):
@@ -86,7 +92,7 @@ class WorkspaceSource:
         for path in self.files():
             yield ManifestItem(
                 path=str(path),
-                sha1=str(sha1(Path(self.source_root / path)).hexdigest()),
+                sha1=str(sha1(Path(self.source_root / path).read_bytes()).hexdigest()),
                 size=Path(self.source_root / path).stat().st_size
             )
 
@@ -111,13 +117,17 @@ class WorkspaceSource:
                 if not self.ignores or not self.ignores.match_file(str(path)):
                     yield path.relative_to(self.source_root)
 
+    @property
+    def suffix_map(self):
+        return self.source.suffix_map
+
     def copy_tuples(self):
         """
         Generator for the source and target file paths."""
         for path in self.files():
             target_path = path
-            if target_path.suffix in self.source.suffix_map:
-                target_path = target_path.with_suffix(self.source.suffix_map[target_path.suffix])
+            if target_path.suffix in self.suffix_map:
+                target_path = target_path.with_suffix(self.suffix_map[target_path.suffix])
             yield self.source_root / path, self.target_root / target_path
 
     def copy_tasks(self):
@@ -129,21 +139,29 @@ class WorkspaceSource:
     def create_manifest(self) -> Manifest:
         """
         Create a manifest for the source files."""
-        return Manifest(items=list(self.source_manifest_items), name=self.source.name)
+        return Manifest(
+            items=list(self.source_manifest_items),
+            name=self.source.package_name,
+            version=self.source.version
+        )
 
     def create_target_manifest(self) -> Manifest:
         """
         Create a manifest for the target files."""
-        return Manifest(items=list(self.target_manifest_items), name=self.source.name)
+        return Manifest(
+            items=list(self.target_manifest_items),
+            name=self.source.package_name,
+            version=self.source.version
+        )
 
     def load_manifest(self) -> Manifest:
         """
         Load the manifest for the source files."""
         if self.manifest_path.exists():
-            json_manifest = json.loads(self.manifest_path.read_text()).get(self.name, {})
+            json_manifest = json.loads(self.manifest_path.read_text()).get(self.source.package_name, {})
         else:
             json_manifest = {}
-        return dacite.from_dict(data_class=Manifest, data=dict(name=self.source.name, **json_manifest))
+        return dacite.from_dict(data_class=Manifest, data=dict(name=self.source.package_name, **json_manifest))
 
     def save_manifest(self, manifest: Manifest) -> None:
         """
@@ -151,7 +169,9 @@ class WorkspaceSource:
         if not self.manifest_root.exists():
             self.manifest_root.mkdir(parents=True)
         manifest_dict = asdict(manifest)
-        json_dict = {manifest_dict.pop("name"): manifest_dict}
+        json_dict = {
+            manifest_dict.pop("name"): manifest_dict,
+        }
         self.manifest_path.write_text(json.dumps(json_dict, indent=2))
 
 
@@ -161,21 +181,30 @@ class WorkspaceArtifact(WorkspaceSource):
     Base class for defining an artifact in a workspace.
     An artifact is a temporary file or directory that is generated during the build process.
     """
+    source: Dependency
+
     @property
     def artifact_root(self) -> Path:
-        return self.workspace.get_path("artifacts")
+        return self.workspace.get_build_path("artifacts")
 
     @property
-    def source_path(self) -> Path:
-        return self.artifact_root / self.source.name
+    def source_root(self) -> Path:
+        return self.artifact_root / self.source.package_name
 
     @property
-    def target_path(self) -> Path:
+    def target_root(self) -> Path:
         return self.workspace.get_build_path(self.source.container)
 
     @property
     def ignores(self) -> PathSpec:
         return None
+
+    @property
+    def suffix_map(self):
+        """
+        Do not change file extensions for artifacts yet
+        """
+        return {}
 
 
 @dataclass(frozen=True, eq=True)
@@ -184,41 +213,42 @@ class WorkspaceDependencyArtifact(WorkspaceArtifact):
     Class for defining a dependency artifact in a workspace.
     A dependency artifact is a package that is downloaded and installed as a dependency.
     """
+
     @property
     def artifact_root(self) -> Path:
         return super().artifact_root / "dependencies"
-    
+
     @property
-    def target_path(self) -> Path:
+    def target_root(self) -> Path:
         return self.workspace.get_package_path()
 
 
 @dataclass(frozen=True, eq=True)
-class WorkspaceToolArtifact(WorkspaceSource):
+class WorkspaceToolArtifact(WorkspaceArtifact):
     @property
     def artifact_root(self) -> Path:
         return super().artifact_root / "tools"
 
     @property
-    def target_path(self) -> Path:
+    def target_root(self) -> Path:
         return self.workspace.get_tool_path()
 
     @property
-    def manifest_root(self) -> Path:
-        return super().manifest_root / "tools"
+    def manifest_folder(self) -> Path:
+        return "tools"
 
 
 @dataclass(frozen=True, eq=True)
 class WorkspaceDependencySource(WorkspaceSource):
     def files(self):
-        return [item.path for item in self.load_manifest().items]
+        yield from [Path(item.path) for item in self.load_manifest().items]
 
     @property
-    def source_path(self) -> Path:
-        return self.workspace.get_package_path(self.source.name)
+    def source_root(self) -> Path:
+        return self.workspace.get_package_path()
 
     @property
-    def target_path(self) -> Path:
+    def target_root(self) -> Path:
         return self.workspace.get_build_path(self.source.container)
 
     @property

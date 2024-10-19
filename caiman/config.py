@@ -124,7 +124,12 @@ class PythonTarget(Target):
 class FileSource(Target):
     files: List[str] = field(default_factory=list)
     parent: str = ""
+    version: str = ""
 
+    @property
+    def package_name(self):
+        return self.name.rsplit("/", 1)[-1]
+    
     @property
     def container(self):
         return "micropython"
@@ -150,15 +155,11 @@ class PythonSource(FileSource, PythonTarget):
 
 
 @dataclass(frozen=True, eq=True)
-class Dependency(PythonTarget):
+class Dependency(PythonSource):
     name: str
     version: str = "latest"
     channel: str = None
 
-    @property
-    def package_name(self):
-        return self.name.rsplit("/", 1)[-1]
-    
     @property
     def manifest_folder(self) -> Path:
         return Path("dependencies")
@@ -174,6 +175,7 @@ class ManifestItem:
 @dataclass(frozen=True, eq=True)
 class Manifest:
     name: str
+    version: str = ''
     items: List[ManifestItem] = field(default_factory=list)
 
 

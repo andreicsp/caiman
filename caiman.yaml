@@ -28,6 +28,10 @@ sources:
 dependencies:
 - name: logger
   version: latest
+- name: github:T0ha/uprotobuf
+  version: main
+  files:
+  - protobuf/uprotobuf.py
 resources:
 - name: micropython
   parent: micropython
