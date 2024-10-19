@@ -73,6 +73,11 @@ class Workspace:
         if root_patterns:
             patterns = root_patterns + patterns
         return patterns
+    
+    def get_relative_path(self, path: Path) -> Path:
+        if not path.is_relative_to(self.root):
+            raise ValueError(f"Path {path} is not relative to workspace root")
+        return path.relative_to(self.root)
 
 
 @dataclass(frozen=True, eq=True)
@@ -123,6 +128,10 @@ class FileSource(Target):
     @property
     def container(self):
         return "micropython"
+    
+    @property
+    def manifest_folder(self) -> Path:
+        return Path("resources")
 
 
 @dataclass(frozen=True, eq=True)
@@ -135,6 +144,10 @@ class PythonSource(FileSource, PythonTarget):
     def container(self):
         return super().container if not self.frozen else "frozen"
 
+    @property
+    def manifest_folder(self) -> Path:
+        return Path("sources")
+
 
 @dataclass(frozen=True, eq=True)
 class Dependency(PythonTarget):
@@ -145,6 +158,10 @@ class Dependency(PythonTarget):
     @property
     def package_name(self):
         return self.name.rsplit("/", 1)[-1]
+    
+    @property
+    def manifest_folder(self) -> Path:
+        return Path("dependencies")
 
 
 @dataclass(frozen=True, eq=True)

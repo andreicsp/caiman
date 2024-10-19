@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import logging
 import subprocess
@@ -9,79 +10,100 @@ from caiman.plugins.base import Goal, Plugin, fail, param
 
 from pathlib import Path
 
-from caiman.target import WorkspaceSource
+from caiman.target import CopyTask, WorkspaceSource
 
 _logger = logging.getLogger(__name__)
 
 
 @dataclass
 class BuildCommand:
-    target: str = param("The target to build", default="")
+    target: str = param("Target to build", default="")
 
     @property
     def builder(self):
-        return self.target.split(":")[0] if ":" in self.target else None
-
+        return self.target.split(":", 1)[0] if self.target else None
+    
     @property
-    def builder_target(self):
-        return self.target.split(":")[1] if ":" in self.target else self.target
+    def buildable(self):
+        parts = self.target.split(":", 1)
+        return self.target.split(":", 1)[1] if len(parts) > 1 else None
 
 
-class Builder:
+class Builder(ABC):
     def __init__(self, config: Config):
         self.config = config
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @property
-    def targets(self):
+    def buildables(self):
         yield from []
 
-    def __call__(self, command: Command):
-        targets = list(self.targets)
-        self._logger.info(f"Building targets: {', '.join(target.source.name for target in targets)}")
-        for target in targets:
-            self._build_target(target)
+    def get_command_buildables(self, command: BuildCommand):
+        if command.buildable:
+            return [buildable for buildable in self.buildables if command.buildable == buildable.source.name]
+        return list(self.buildables)
+
+    @abstractmethod
+    def _build(self, source: WorkspaceSource):
+        """
+        Process a buildable source.
+        """
+
+    def __call__(self, command: BuildCommand):
+        buildables = self.get_command_buildables(command)
+        if not buildables:
+            if not command.builder:
+                return
+            raise RuntimeError(f"No buildable sources found for target '{command.target}'")
+
+        self._logger.info(f"Building targets: {', '.join(buildable.source.name for buildable in buildables)}")
+        for buildable in buildables:
+            if not command.buildable or command.buildable == buildable.source.name:
+                self._build(buildable)
 
 
 class ResourceBuilder(Builder):
     @property
-    def targets(self):
+    def buildables(self):
         yield from [WorkspaceSource(workspace=self.config.workspace, source=source) for source in self.config.resources]
 
-    def _copy_file(self, source_file: Path, target_file: Path, source: WorkspaceSource):
-        _logger.info(f"Copying {source_file} to {target_file}")
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        target_file.write_bytes(source_file.read_bytes())
+    def _copy_task(self, task: CopyTask):
+        self._logger.info(f"Copying {task.rel_source_path} to {task.rel_target_path}")
 
-    def _build_target(self, source: WorkspaceSource):
+        task.target_file.parent.mkdir(parents=True, exist_ok=True)
+        task.target_file.write_bytes(task.source_file.read_bytes())
+
+    def _build(self, source: WorkspaceSource):
         self._logger.info(f"Building {source.source.name}")
-        for source_file, target_file in source.copy_tuples():
-            self._copy_file(source_file, target_file, source=source)
+        for task in source.copy_tasks():
+            self._copy_task(task)
 
         manifest = source.create_target_manifest()
         source.save_manifest(manifest)
+        self._logger.info(f"Manifest saved to {source.workspace.get_relative_path(source.manifest_path)}")
 
 
 class SourceBuilder(ResourceBuilder):
     @property
-    def targets(self):
+    def buildables(self):
         yield from [WorkspaceSource(workspace=self.config.workspace, source=source) for source in self.config.sources]
 
-    def _compile_file(self, source_file: Path, target_file: Path):
-        self._logger.info(f"Compiling {source_file} to {target_file}")
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        command = [sys.executable, "-m", "mpy_cross_v6", str(source_file), "-o", str(target_file)]
+    def _compile_file(self, task: CopyTask):
+        self._logger.info(f"Compiling {task.rel_source_path} to {task.rel_target_path}")
+
+        task.target_file.parent.mkdir(parents=True, exist_ok=True)
+        command = [sys.executable, "-m", "mpy_cross_v6", str(task.source_file), "-o", str(task.target_file)]
         try:
             subprocess.run(command, check=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
-            _logger.error(f"Command '{command}' returned non-zero exit status {e.returncode}.")
+            self._logger.error(f"Command '{command}' returned non-zero exit status {e.returncode}.")
             fail(f"Error output: {e.stderr.decode('utf-8')}")
 
-    def _copy_file(self, source_file: Path, target_file: Path, source: WorkspaceSource):
-        if source_file.suffix == ".py" and source.source.compile:
-            self._compile_file(source_file, target_file)
+    def _copy_task(self, task: CopyTask):
+        if task.source_file.suffix == ".py" and task.source.compile:
+            self._compile_file(task)
         else:
-            super()._copy_file(source_file=source_file, target_file=target_file, source=source)
+            super()._copy_file(task)
 
 
 class BuildGoal(Goal):
@@ -105,12 +127,15 @@ class BuildGoal(Goal):
             "resources": ResourceBuilder(self.config),
             "sources": SourceBuilder(self.config),
         }
- 
+
     def __call__(self, command: Command):
         goal_command = BuildCommand(**command.params)
         for name, builder in self.builders.items():
-            if not goal_command.builder_target or goal_command.builder == name:
-                builder(command)
+            if not goal_command.builder or goal_command.builder == name:
+                try:
+                    builder(goal_command)
+                except Exception as e:
+                    self.fail(str(e))
 
 
 class ApplicationBuilderPlugin(Plugin):

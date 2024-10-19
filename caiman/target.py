@@ -15,6 +15,29 @@ from caiman.config import FileSource, Manifest, ManifestItem, Workspace
 
 
 @dataclass(frozen=True, eq=True)
+class CopyTask:
+    """
+    Class for defining a copy task between two paths.
+    """
+    source_file: Path
+    target_file: Path
+    source: FileSource
+    workspace: Workspace
+
+    @property
+    def rel_source_path(self) -> Path:
+        """
+        The relative source path."""
+        return self.workspace.get_relative_path(self.source_file)
+
+    @property
+    def rel_target_path(self) -> Path:
+        """
+        The relative target path."""
+        return self.workspace.get_relative_path(self.target_file)
+
+
+@dataclass(frozen=True, eq=True)
 class WorkspaceSource:
     """
     Base class for defining a source of files in a workspace.
@@ -48,7 +71,7 @@ class WorkspaceSource:
     def manifest_root(self) -> Path:
         """
         The root directory for the source manifests."""
-        return self.workspace.get_build_path("manifests")
+        return self.workspace.get_build_path("manifests") / self.source.manifest_folder
 
     @property
     def manifest_path(self) -> Path:
@@ -97,6 +120,12 @@ class WorkspaceSource:
                 target_path = target_path.with_suffix(self.source.suffix_map[target_path.suffix])
             yield self.source_root / path, self.target_root / target_path
 
+    def copy_tasks(self):
+        """
+        Generator for the copy tasks."""
+        for source_path, target_path in self.copy_tuples():
+            yield CopyTask(source_file=source_path, target_file=target_path, source=self.source, workspace=self.workspace)
+
     def create_manifest(self) -> Manifest:
         """
         Create a manifest for the source files."""
@@ -137,10 +166,6 @@ class WorkspaceArtifact(WorkspaceSource):
         return self.workspace.get_path("artifacts")
 
     @property
-    def manifest_root(self) -> Path:
-        return super().manifest_root / "artifacts"
-
-    @property
     def source_path(self) -> Path:
         return self.artifact_root / self.source.name
 
@@ -163,10 +188,6 @@ class WorkspaceDependencyArtifact(WorkspaceArtifact):
     def artifact_root(self) -> Path:
         return super().artifact_root / "dependencies"
     
-    @property
-    def manifest_root(self) -> Path:
-        return super().manifest_root / "dependencies"
-
     @property
     def target_path(self) -> Path:
         return self.workspace.get_package_path()
@@ -203,7 +224,3 @@ class WorkspaceDependencySource(WorkspaceSource):
     @property
     def ignores(self) -> PathSpec:
         return None
-
-    @property
-    def manifest_root(self) -> Path:
-        return super().manifest_root / "dependencies"

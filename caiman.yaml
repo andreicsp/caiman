@@ -28,5 +28,9 @@ sources:
 dependencies:
 - name: logger
   version: latest
-resources: []
+resources:
+- name: micropython
+  parent: micropython
+  files:
+    - '**/*.json'
 tools: []
