@@ -9,7 +9,7 @@ import logging
 class Goal(ABC):
     def __init__(self, config: Config):
         self.config = config
-        self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger = logging.getLogger(self.name)
 
     @property
     @abstractmethod
@@ -19,7 +19,7 @@ class Goal(ABC):
     @property
     @abstractmethod
     def name(self):
-        pass
+        return self.__class__.__name__
 
     @abstractmethod
     def get_schema(self) -> Type:
@@ -33,7 +33,7 @@ class Goal(ABC):
         fail(f"[{self.name}] {message}")
 
     def info(self, message):
-        self._logger.info(f"[{self.name}] {message}")
+        self._logger.info(f"{message}")
 
 
 class Plugin(ABC):

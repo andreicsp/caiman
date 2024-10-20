@@ -225,3 +225,34 @@ class WorkspaceDependencySource(WorkspaceSource):
     @property
     def ignores(self) -> PathSpec:
         return None
+
+
+@dataclass
+class WorkspaceManifest:
+    workspace: Workspace
+    sources: list
+    resources: list
+    dependencies: list
+    name: str
+    version: str
+
+    @property
+    def all_sources(self):
+        for resource in self.resources:
+            yield WorkspaceSource(workspace=self.workspace, source=resource)
+        for source in self.sources:
+            yield WorkspaceSource(workspace=self.workspace, source=source)
+        for dependency in self.dependencies:
+            yield WorkspaceDependencyArtifact(workspace=self.workspace, source=dependency)
+
+    @property
+    def all_manifest_items(self):
+        for source in self.all_sources:
+            yield from source.load_manifest().items
+
+    def create_manifest(self) -> Manifest:
+        return Manifest(
+            name=self.name,
+            version=self.version,
+            items=list(self.all_manifest_items)
+        )

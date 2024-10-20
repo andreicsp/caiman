@@ -10,7 +10,7 @@ from caiman.config import Config
 from typing import Callable, Optional
 import importlib
 
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger("device")
 
 
 class CommandError(Exception):

@@ -20,7 +20,7 @@ from caiman.plugins.base import Plugin, fail
 import dataclasses
 import logging
 
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger("caiman")
 
 
 def get_arg_parser(goals: Tuple[Plugin]):
@@ -42,6 +42,8 @@ def get_arg_parser(goals: Tuple[Plugin]):
             kwargs = {}
             if field.default is not dataclasses.MISSING:
                 kwargs["default"] = field.default
+                if type(field.default) is bool:
+                    kwargs["action"] = "store_true"
             elif field.default_factory is not dataclasses.MISSING:
                 kwargs["default_factory"] = field.default_factory
             else:
@@ -78,7 +80,10 @@ def main():
 
     parser = get_arg_parser(goals)
     args = parser.parse_args()
-    logging.basicConfig(level=logging.ERROR if args.silent else logging.INFO)
+    logging.basicConfig(
+        level=logging.ERROR if args.silent else logging.INFO,
+        format="%(levelname)s [%(name)s] %(message)s"
+    )
 
     if not args.silent:
         print("""

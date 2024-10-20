@@ -142,7 +142,7 @@ class PythonTarget(Target):
         if self.compile:
             m[".py"] = ".mpy"
         return m
-    
+
 
 @dataclass(frozen=True, eq=True)
 class FileSource(Target):

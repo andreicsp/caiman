@@ -4,16 +4,14 @@ import logging
 import shutil
 import subprocess
 import sys
-from time import sleep
 from typing import Tuple
 
 from caiman.config import Command, Config
 from caiman.plugins.base import Goal, Plugin, fail, param
 
-from pathlib import Path
 
-from caiman.plugins.installer import InstallGoal, MIPInstallerPlugin
-from caiman.target import CopyTask, WorkspaceDependencyArtifact, WorkspaceDependencySource, WorkspaceSource
+from caiman.plugins.installer import MIPInstallerPlugin
+from caiman.target import CopyTask, WorkspaceDependencyArtifact, WorkspaceSource
 
 _logger = logging.getLogger(__name__)
 
@@ -36,7 +34,11 @@ class BuildCommand:
 class Builder(ABC):
     def __init__(self, config: Config):
         self.config = config
-        self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger = logging.getLogger(f"build:{self.name}")
+
+    @property
+    def name(self):
+        return self.__class__.__name__
 
     @property
     def buildables(self):
@@ -68,6 +70,10 @@ class Builder(ABC):
 
 class ResourceBuilder(Builder):
     @property
+    def name(self):
+        return "resources"
+
+    @property
     def buildables(self):
         yield from [WorkspaceSource(workspace=self.config.workspace, source=source) for source in self.config.resources]
 
@@ -88,6 +94,10 @@ class ResourceBuilder(Builder):
 
 
 class SourceBuilder(ResourceBuilder):
+    @property
+    def name(self):
+        return "sources"
+
     @property
     def buildables(self):
         yield from [WorkspaceSource(workspace=self.config.workspace, source=source) for source in self.config.sources]
@@ -111,6 +121,10 @@ class SourceBuilder(ResourceBuilder):
 
 
 class DependencyBuilder(SourceBuilder):
+    @property
+    def name(self):
+        return "dependencies"
+
     @property
     def buildables(self):
         yield from [
@@ -139,11 +153,11 @@ class BuildGoal(Goal):
 
     @property
     def builders(self):
-        return {
-            "resources": ResourceBuilder(self.config),
-            "sources": SourceBuilder(self.config),
-            "dependencies": DependencyBuilder(self.config)
-        }
+        return (
+            ResourceBuilder(self.config),
+            SourceBuilder(self.config),
+            DependencyBuilder(self.config)
+        )
 
     def clean(self):
         mp_deploy_path = self.config.workspace.get_build_asset_path(is_frozen=False)
@@ -161,8 +175,8 @@ class BuildGoal(Goal):
         if not goal_command.target:
             self.clean()
 
-        for name, builder in self.builders.items():
-            if not goal_command.builder or goal_command.builder == name:
+        for builder in self.builders:
+            if not goal_command.builder or goal_command.builder == builder.name:
                 try:
                     builder(goal_command)
                 except Exception as e:

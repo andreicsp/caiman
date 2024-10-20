@@ -10,6 +10,8 @@ from dataclasses import dataclass
 
 from pathlib import Path
 
+from caiman.target import WorkspaceManifest
+
 _logger = logging.getLogger(__name__)
 
 
@@ -20,7 +22,7 @@ class DeployCommand:
 
 class DeployGoal(Goal):
     def __init__(self, config: Config, fs: FileSystem):
-        self.config = config
+        super().__init__(config)
         self._fs = fs
 
     @property
@@ -35,19 +37,12 @@ class DeployGoal(Goal):
         return DeployCommand
 
     def __call__(self, command: Command):
-        paths = Path(self.config.workspace.python_build).glob("*")
+        mp_root_path = self.config.workspace.get_build_asset_path(is_frozen=False)
+        paths = mp_root_path.glob("*")
         for path in paths:
-            firmware_target = path.relative_to(self.config.workspace.python_build)
-            firmware_target = firmware_target.relative_to("/") if firmware_target.is_absolute() else firmware_target
-            if path.is_dir():
-                firmware_target = firmware_target.parent
-
-            firmware_target = str(firmware_target.as_posix())
-            _logger.info(f"Uploading {path} to {firmware_target}")
-
-            firmware_target = "" if firmware_target == "." else firmware_target
-            path = path.relative_to(self.config.workspace.python_build)
-            self._fs.upload(src=str(path), dst=firmware_target, cwd=self.config.workspace.python_build)
+            rel_path = str(path.relative_to(mp_root_path))
+            self.info(f"Uploading {rel_path}")
+            self._fs.upload(src=rel_path, dst="", cwd=mp_root_path)
 
 
 class DeployPlugin(Plugin):

@@ -48,7 +48,7 @@ class InstallGoal(Goal):
         return InstallCommand
 
     def _mip_install(self, name: str, version: str, index: str, install_path: str, target: str = ''):
-        _logger.info(f"Installing {name} ({version}) to {install_path}/{target}")
+        self.info(f"Installing {name} ({version}) to {install_path}/{target}")
         remote_root = '/remote'
         target = '/'.join([remote_root, target]) if target else remote_root
 
@@ -66,9 +66,8 @@ class InstallGoal(Goal):
         install_targets = [''] if not artifact.source.files else [Path(f).parent for f in artifact.source.files]
 
         current_manifest = artifact.load_manifest()
-        print(f"Current manifest: {current_manifest.name}@{current_manifest.version}. Force: {force}")
         if current_manifest.version == artifact.source.version and not force:
-            _logger.info(f"Dependency {artifact.source.name} ({artifact.source.version}) is already installed")
+            self.info(f"Dependency {artifact.source.name} ({artifact.source.version}) is already installed")
             return artifact.workspace_source
 
         for name, target in zip(install_names, install_targets):
