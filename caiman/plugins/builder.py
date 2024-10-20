@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import logging
+import shutil
 import subprocess
 import sys
+from time import sleep
 from typing import Tuple
 
 from caiman.config import Command, Config
@@ -10,7 +12,8 @@ from caiman.plugins.base import Goal, Plugin, fail, param
 
 from pathlib import Path
 
-from caiman.target import CopyTask, WorkspaceSource
+from caiman.plugins.installer import InstallGoal, MIPInstallerPlugin
+from caiman.target import CopyTask, WorkspaceDependencyArtifact, WorkspaceDependencySource, WorkspaceSource
 
 _logger = logging.getLogger(__name__)
 
@@ -18,6 +21,7 @@ _logger = logging.getLogger(__name__)
 @dataclass
 class BuildCommand:
     target: str = param("Target to build", default="")
+    force: bool = param("Force build", default=False)
 
     @property
     def builder(self):
@@ -44,7 +48,7 @@ class Builder(ABC):
         return list(self.buildables)
 
     @abstractmethod
-    def _build(self, source: WorkspaceSource):
+    def _build(self, source: WorkspaceSource, command: BuildCommand):
         """
         Process a buildable source.
         """
@@ -59,7 +63,7 @@ class Builder(ABC):
         self._logger.info(f"Building targets: {', '.join(buildable.source.name for buildable in buildables)}")
         for buildable in buildables:
             if not command.buildable or command.buildable == buildable.source.name:
-                self._build(buildable)
+                self._build(buildable, command=command)
 
 
 class ResourceBuilder(Builder):
@@ -73,12 +77,12 @@ class ResourceBuilder(Builder):
         task.target_file.parent.mkdir(parents=True, exist_ok=True)
         task.target_file.write_bytes(task.source_file.read_bytes())
 
-    def _build(self, source: WorkspaceSource):
+    def _build(self, source: WorkspaceSource, command: BuildCommand):
         self._logger.info(f"Building {source.source.name}")
-        for task in source.copy_tasks():
+        for task in source.get_copy_tasks():
             self._copy_task(task)
 
-        manifest = source.create_target_manifest()
+        manifest = source.create_manifest()
         source.save_manifest(manifest)
         self._logger.info(f"Manifest saved to {source.workspace.get_relative_path(source.manifest_path)}")
 
@@ -103,13 +107,25 @@ class SourceBuilder(ResourceBuilder):
         if task.source_file.suffix == ".py" and task.source.compile:
             self._compile_file(task)
         else:
-            super()._copy_file(task)
+            super()._copy_task(task)
+
+
+class DependencyBuilder(SourceBuilder):
+    @property
+    def buildables(self):
+        yield from [
+            WorkspaceDependencyArtifact(
+                workspace=self.config.workspace, source=source
+            ) for source in self.config.dependencies
+        ]
+
+    def _build(self, source: WorkspaceDependencyArtifact, command: BuildCommand):
+        workspace_source = MIPInstallerPlugin(self.config).install(source, force=command.force)
+        if workspace_source:
+            return super()._build(workspace_source, command=command)
 
 
 class BuildGoal(Goal):
-    def __init__(self, config):
-        self.config = config
-
     @property
     def help(self):
         return "Build dependencies, tools, sources, and resources"
@@ -126,10 +142,25 @@ class BuildGoal(Goal):
         return {
             "resources": ResourceBuilder(self.config),
             "sources": SourceBuilder(self.config),
+            "dependencies": DependencyBuilder(self.config)
         }
+
+    def clean(self):
+        mp_deploy_path = self.config.workspace.get_build_asset_path(is_frozen=False)
+        if mp_deploy_path.exists():
+            self.info(f"Removing {mp_deploy_path}")
+            shutil.rmtree(mp_deploy_path, ignore_errors=True)
+
+        frozen_path = self.config.workspace.get_build_asset_path(is_frozen=True)
+        if frozen_path.exists():
+            self.info(f"Removing {frozen_path}")
+            shutil.rmtree(frozen_path, ignore_errors=True)
 
     def __call__(self, command: Command):
         goal_command = BuildCommand(**command.params)
+        if not goal_command.target:
+            self.clean()
+
         for name, builder in self.builders.items():
             if not goal_command.builder or goal_command.builder == name:
                 try:

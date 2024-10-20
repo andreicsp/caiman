@@ -26,10 +26,11 @@ sources:
   compile: true
   frozen: false
 dependencies:
-- name: logger
+- name: logging
   version: latest
 - name: github:T0ha/uprotobuf
   version: main
+  compile: false
   files:
   - protobuf/uprotobuf.py
 resources:

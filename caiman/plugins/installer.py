@@ -10,7 +10,7 @@ from caiman.device.handler import DeviceHandler
 from pathlib import Path
 
 from caiman.plugins.base import Goal, Plugin, fail, param
-from caiman.target import WorkspaceArtifact, WorkspaceDependencyArtifact, WorkspaceDependencySource, WorkspaceToolArtifact
+from caiman.target import WorkspaceArtifact, WorkspaceDependencyArtifact, WorkspaceDependencySource, WorkspaceSource, WorkspaceToolArtifact
 
 _logger = logging.getLogger(__name__)
 
@@ -59,16 +59,17 @@ class InstallGoal(Goal):
         ]
         return self.device.run_mp_remote_cmd(*cmd, mount_path=install_path)
 
-    def install(self, artifact: WorkspaceArtifact, force: bool = False):
+    def install(self, artifact: WorkspaceArtifact, force: bool = False) -> WorkspaceSource:
         parent = artifact.source_root
         channel = self.config.get_channel(artifact.source.channel)
         install_names = [artifact.source.name] if not artifact.source.files else [f"{artifact.source.name}/{f}" for f in artifact.source.files]
         install_targets = [''] if not artifact.source.files else [Path(f).parent for f in artifact.source.files]
 
         current_manifest = artifact.load_manifest()
+        print(f"Current manifest: {current_manifest.name}@{current_manifest.version}. Force: {force}")
         if current_manifest.version == artifact.source.version and not force:
             _logger.info(f"Dependency {artifact.source.name} ({artifact.source.version}) is already installed")
-            return
+            return artifact.workspace_source
 
         for name, target in zip(install_names, install_targets):
             file_install_path = parent / target
@@ -84,15 +85,15 @@ class InstallGoal(Goal):
         manifest = artifact.create_manifest()
         artifact.save_manifest(manifest)
 
-        for copy_task in artifact.copy_tasks():
+        for copy_task in artifact.get_copy_tasks():
             copy_task.target_file.parent.mkdir(parents=True, exist_ok=True)
             copy_task.target_file.write_bytes(copy_task.source_file.read_bytes())
             copy_task.source_file.unlink()
         
-        artifact.source_root.rmdir()
+        # artifact.source_root.rmdir()
         target_root_rel = self.config.workspace.get_relative_path(artifact.target_root)
         self.info(f"Dependency {artifact.source.name} ({artifact.source.version}) installed at {target_root_rel}")
-        return 
+        return artifact.workspace_source
 
     def __call__(self, command: Command):
         command = InstallCommand(**command.params)
@@ -110,7 +111,7 @@ class InstallGoal(Goal):
             artifact = WorkspaceToolArtifact(source=dep, workspace=self.config.workspace)
         else:
             raise ValueError(f"Invalid scope: {command.scope}")
-        return self.install(artifact, force=command.reinstall)
+        self.install(artifact, force=command.reinstall)
 
 
 class MIPInstallerPlugin(Plugin):
@@ -118,8 +119,8 @@ class MIPInstallerPlugin(Plugin):
         super().__init__(config)
         self.device = DeviceHandler(config=config)
 
-    def install(self, dep: Dependency):
-        return InstallGoal(config=self.config, device=self.device).install(dep)
+    def install(self, dep: WorkspaceArtifact, force: bool = False) -> WorkspaceSource:
+        return InstallGoal(config=self.config, device=self.device).install(dep, force=force)
 
     def get_goals(self):
         return [InstallGoal(config=self.config, device=self.device)]
