@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from functools import lru_cache
 from hashlib import sha1
 import json
@@ -20,6 +20,29 @@ IGNORES = [
 DEFAULT_CONF_FILE = Path.cwd() / "caiman.yaml"
 
 
+def config_field(
+        default=IGNORES,
+        default_factory=IGNORES,
+        label=None,
+        project_init=False,
+        metadata=None):
+    metadata = metadata or {}
+    metadata["label"] = label
+    metadata["project_init"] = project_init
+    if default is not IGNORES:
+        return field(default=default, metadata=metadata)
+    if default_factory is not IGNORES:
+        return field(default_factory=default_factory, metadata=metadata)
+
+
+def get_field_label(field):
+    return field.metadata.get("label", field.name)
+
+
+def get_project_init_fields(cls):
+    return [f for f in fields(cls) if f.metadata.get("project_init")]
+
+
 @dataclass
 class Command:
     goal: str
@@ -29,9 +52,9 @@ class Command:
 
 @dataclass
 class Application:
-    name: str = ""
-    version: str = "0.0.1"
-    author: str = ""
+    name: str = config_field("", label="Project name", project_init=True)
+    version: str = config_field("0.0.1", label="Project version", project_init=True)
+    author: str = config_field("", label="Author", project_init=True)
 
 
 @dataclass
@@ -55,9 +78,9 @@ class ConfigElement:
 @dataclass(frozen=True, eq=True)
 class Workspace(ConfigElement):
     root: str
-    build: str = "build/board"
-    packages: str = "venv/mip-packages"
-    tools: str = "venv/tools"
+    build: str = config_field("build/board", label="Build directory", project_init=True)
+    packages: str = config_field("venv/mip-packages", label="Local MIP package directory", project_init=True)
+    tools: str = config_field("venv/tools", label="Local tools directory", project_init=True)
     plugins: List[str] = field(default_factory=list)
     extra_ignores: List[str] = field(default_factory=lambda: IGNORES)
     use_gitignore: bool = True
@@ -255,7 +278,7 @@ class Config:
 
     @classmethod
     def default(cls) -> "Config":
-        return cls(root_path=str(Path.cwd() / DEFAULT_CONF_FILE))
+        return cls(workspace=Workspace(root=str(Path.cwd() / DEFAULT_CONF_FILE)))
 
     @classmethod
     def load(cls, path: str = "") -> "Config":

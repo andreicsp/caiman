@@ -1,9 +1,9 @@
 import logging
 
-from caiman.config import DEFAULT_CONF_FILE, Command, Config
+from caiman.config import DEFAULT_CONF_FILE, Command, Config, get_project_init_fields
+
 from caiman.plugins.base import Goal, Plugin, fail
 import dataclasses
-import yaml
 
 _logger = logging.getLogger(__name__)
 
@@ -31,18 +31,19 @@ class WorkspaceInitGoal(Goal):
     def __call__(self, command: Command):
         if DEFAULT_CONF_FILE.exists() and not command.force:
             fail("Config file already exists")
-        
-        _logger.info(f"Creating config file: {DEFAULT_CONF_FILE}")
-        _logger.info("Project details:")
-        firmware = self.config.application
-        firmware.name = input(f"Project name [{firmware.name}]:") or firmware.name
-        firmware.version = input(f"Project version [{firmware.version}]:") or firmware.version
-        firmware.author = input(f"Author [{firmware.author}]:") or firmware.author
+        else:
+            _logger.info(f"Updating config file: {DEFAULT_CONF_FILE}")
 
+        _logger.info("Project details:")
+        app = _updated_config_from_input(self.config.application)
+    
         _logger.info("Workspace structure:")
-        workspace = self.config.workspace
-        workspace.build = input(f"Build directory [{workspace.build}]:") or workspace.build
-        workspace.packages = input(f"Local MIP package directory [{workspace.packages}]:") or workspace.packages
+        workspace = _updated_config_from_input(self.config.workspace)
+        self.config = dataclasses.replace(
+            self.config, 
+            application=app,
+            workspace=workspace
+        )
         self.config.save(path=DEFAULT_CONF_FILE)
         _logger.info(f"Config file created: {DEFAULT_CONF_FILE}")
 
@@ -53,3 +54,14 @@ class WorkspacePlugin(Plugin):
     """
     def get_goals(self):
         return (WorkspaceInitGoal(config=self.config),)
+
+
+def _updated_config_from_input(config: Config):
+    init_fields = get_project_init_fields(config)
+    update_dict = {}
+    for init_field in init_fields:
+        current_value = getattr(config, init_field.name)
+        new_value = input(f"{init_field.metadata['label']} [{current_value}]:") or current_value
+        update_dict[init_field.name] = new_value
+
+    return dataclasses.replace(config, **update_dict)

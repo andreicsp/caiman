@@ -16,7 +16,7 @@ from typing import Tuple
 from caiman.config import DEFAULT_CONF_FILE, Command, Config
 from caiman.device.handler import CommandError
 from caiman.loader import get_pre_init_plugins, load_plugins
-from caiman.plugins.base import Plugin, fail
+from caiman.plugins.base import Goal, Plugin, fail
 import dataclasses
 import logging
 
@@ -53,7 +53,7 @@ def get_arg_parser(goals: Tuple[Plugin]):
     return parser
 
 
-def get_goals(plugins: Tuple[Plugin]) -> Tuple[Plugin]:
+def get_goals(plugins: Tuple[Plugin]) -> Tuple[Goal]:
     plugin_by_goal = {}
     goals = []
     for plugin in plugins:
