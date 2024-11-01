@@ -1,7 +1,8 @@
+from dataclasses import dataclass
+
 from caiman.config import Command
 from caiman.device.handler import DeviceHandler
 from caiman.plugins.base import Goal, Plugin, param
-from dataclasses import dataclass
 
 
 @dataclass
@@ -35,6 +36,4 @@ class RunnerPlugin(Plugin):
         self._device = DeviceHandler(config=config)
 
     def get_goals(self):
-        return (RunnerGoal(device=self._device), )
-
-
+        return (RunnerGoal(device=self._device),)

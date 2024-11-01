@@ -2,13 +2,13 @@
 Plugin loader for caiman
 """
 
-from typing import List
-from caiman.config import Config
 from importlib import import_module
+from typing import List
 
+from caiman.config import Config
 from caiman.plugins.base import Plugin, PluginProvider
-from caiman.plugins.workspace import WorkspacePlugin
 from caiman.plugins.core import CorePluginProvider
+from caiman.plugins.workspace import WorkspacePlugin
 
 
 def get_pre_init_plugins(config) -> List[Plugin]:
@@ -37,7 +37,8 @@ def load_plugins(config: Config) -> List[Plugin]:
             plugin = class_obj(config=config)
             plugins.append(plugin)
         else:
-            raise TypeError(f"{class_obj} is not a subclass of Plugin or PluginProvider")
+            raise TypeError(
+                f"{class_obj} is not a subclass of Plugin or PluginProvider"
+            )
 
     return plugins
-

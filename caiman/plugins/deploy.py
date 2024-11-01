@@ -1,18 +1,12 @@
 """
 Plugins that upload build artifacts to the target device
 """
-import logging
+from dataclasses import dataclass
+
 from caiman.config import Command, Config
 from caiman.device.fs import FileSystem
 from caiman.device.handler import DeviceHandler
 from caiman.plugins.base import Goal, Plugin
-from dataclasses import dataclass
-
-from pathlib import Path
-
-from caiman.target import WorkspaceManifest
-
-_logger = logging.getLogger(__name__)
 
 
 @dataclass

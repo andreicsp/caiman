@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+
 from caiman.config import Command
 from caiman.device.fs import FileSystem
 from caiman.device.handler import DeviceHandler
@@ -109,5 +110,5 @@ class FileSystemPlugin(Plugin):
             UploadGoal(fs=self._fs),
             MKDirGoal(fs=self._fs),
             GetFileContentsGoal(fs=self._fs),
-            GetJsonGoal(fs=self._fs)
+            GetJsonGoal(fs=self._fs),
         )

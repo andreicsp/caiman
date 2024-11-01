@@ -16,6 +16,7 @@ class CopyTask:
     """
     Class for defining a copy task between two paths.
     """
+
     source_file: Path
     target_file: Path
     source: FileSource
@@ -32,19 +33,22 @@ class CopyTask:
         """
         The relative target path."""
         return self.workspace.get_relative_path(self.target_file)
-    
+
 
 @dataclass(frozen=True, eq=True)
 class WorkspaceSource:
     """
     Base class for defining a source of files in a workspace.
     """
+
     workspace: Workspace
     source: FileSource
 
     def __post_init__(self):
         if Path(self.source.parent).is_absolute():
-            raise ValueError(f"Source parent directory path must be relative: {self.source}")
+            raise ValueError(
+                f"Source parent directory path must be relative: {self.source}"
+            )
 
     @property
     def source_root(self) -> Path:
@@ -113,14 +117,21 @@ class WorkspaceSource:
         for path in self.get_source_files():
             target_path = path
             if target_path.suffix in self.suffix_map:
-                target_path = target_path.with_suffix(self.suffix_map[target_path.suffix])
+                target_path = target_path.with_suffix(
+                    self.suffix_map[target_path.suffix]
+                )
             yield self.source_root / path, self.target_root / target_path
 
     def get_copy_tasks(self):
         """
         Generator for the copy tasks."""
         for source_path, target_path in self.get_copy_tuples():
-            yield CopyTask(source_file=source_path, target_file=target_path, source=self.source, workspace=self.workspace)
+            yield CopyTask(
+                source_file=source_path,
+                target_file=target_path,
+                source=self.source,
+                workspace=self.workspace,
+            )
 
     def create_manifest(self) -> Manifest:
         """
@@ -129,7 +140,7 @@ class WorkspaceSource:
             package_name=self.source.package_name,
             version=self.source.version,
             source_root=self.target_root,
-            paths=list(self.get_target_files())
+            paths=list(self.get_target_files()),
         )
 
     def load_manifest(self) -> Manifest:
@@ -149,6 +160,7 @@ class WorkspaceArtifact(WorkspaceSource):
     Base class for defining an artifact in a workspace.
     An artifact is a temporary file or directory that is generated during the build process.
     """
+
     source: Dependency
 
     @property
@@ -213,7 +225,9 @@ class WorkspaceToolArtifact(WorkspaceArtifact):
 @dataclass(frozen=True, eq=True)
 class WorkspaceDependencySource(WorkspaceSource):
     def get_source_manifest(self):
-        return WorkspaceDependencyArtifact(workspace=self.workspace, source=self.source).load_manifest()
+        return WorkspaceDependencyArtifact(
+            workspace=self.workspace, source=self.source
+        ).load_manifest()
 
     def get_source_files(self):
         yield from [Path(item.path) for item in self.get_source_manifest().items]
@@ -243,7 +257,9 @@ class WorkspaceManifest:
         for source in self.sources:
             yield WorkspaceSource(workspace=self.workspace, source=source)
         for dependency in self.dependencies:
-            yield WorkspaceDependencyArtifact(workspace=self.workspace, source=dependency)
+            yield WorkspaceDependencyArtifact(
+                workspace=self.workspace, source=dependency
+            )
 
     @property
     def all_manifest_items(self):
@@ -252,7 +268,5 @@ class WorkspaceManifest:
 
     def create_manifest(self) -> Manifest:
         return Manifest(
-            name=self.name,
-            version=self.version,
-            items=list(self.all_manifest_items)
+            name=self.name, version=self.version, items=list(self.all_manifest_items)
         )

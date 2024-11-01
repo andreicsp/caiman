@@ -1,9 +1,8 @@
+import dataclasses
 import logging
 
 from caiman.config import DEFAULT_CONF_FILE, Command, Config, get_project_init_fields
-
 from caiman.plugins.base import Goal, Plugin, fail
-import dataclasses
 
 _logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ class WorkspaceInitGoal(Goal):
     @property
     def help(self):
         return "Initialize a new workspace"
-  
+
     @property
     def name(self):
         return "init"
@@ -37,13 +36,11 @@ class WorkspaceInitGoal(Goal):
         _logger.info("Project details:")
         print(f"Root: {self.config.workspace.root}")
         app = _updated_config_from_input(self.config.application)
-    
+
         _logger.info("Workspace structure:")
         workspace = _updated_config_from_input(self.config.workspace)
         self.config = dataclasses.replace(
-            self.config,
-            application=app,
-            workspace=workspace
+            self.config, application=app, workspace=workspace
         )
         self.config.save(path=DEFAULT_CONF_FILE)
         build_path = self.config.workspace.get_build_path()
@@ -74,6 +71,7 @@ class WorkspacePlugin(Plugin):
     """
     Plugin to handle configuration files
     """
+
     def get_goals(self):
         return (WorkspaceInitGoal(config=self.config),)
 
@@ -83,7 +81,9 @@ def _updated_config_from_input(config: Config):
     update_dict = {}
     for init_field in init_fields:
         current_value = getattr(config, init_field.name)
-        new_value = input(f"{init_field.metadata['label']} [{current_value}]:") or current_value
+        new_value = (
+            input(f"{init_field.metadata['label']} [{current_value}]:") or current_value
+        )
         update_dict[init_field.name] = new_value
 
     return dataclasses.replace(config, **update_dict)

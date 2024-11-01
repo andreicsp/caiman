@@ -1,9 +1,10 @@
-from abc import ABC, abstractmethod
-import sys
-from typing import Tuple, Type
-from caiman.config import Command, Config
 import dataclasses
 import logging
+import sys
+from abc import ABC, abstractmethod
+from typing import Tuple, Type
+
+from caiman.config import Command, Config
 
 
 class Goal(ABC):
@@ -47,7 +48,7 @@ class Plugin(ABC):
     @property
     def name(self):
         return self.__class__.__name__
-    
+
 
 class PluginProvider(ABC):
     @abstractmethod
@@ -60,8 +61,12 @@ def fail(message):
     sys.exit(1)
 
 
-def param(help, default=dataclasses.MISSING, default_factory=dataclasses.MISSING, **kwargs):
+def param(
+    help, default=dataclasses.MISSING, default_factory=dataclasses.MISSING, **kwargs
+):
     return dataclasses.field(
-        metadata={"help": help}, default=default, default_factory=default_factory, **kwargs
+        metadata={"help": help},
+        default=default,
+        default_factory=default_factory,
+        **kwargs,
     )
-

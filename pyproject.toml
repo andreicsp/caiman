@@ -7,15 +7,22 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 mpremote = "^1.22.0"
 mpy-cross-v6 = "^1.0.1"
 pyaml = "^23.12.0"
 dacite = "^1.8.1"
 pathspec = "^0.12.1"
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.dev-dependencies]
 pytest = "^8.3.3"
+pytest-cov = "^2.11"
+sphinx = "^6.2"
+flake8 = "^5.0.0"
+Flake8-pyproject = "^1.2.0"
+black = "^22.3.0"
+click = "^8.0.1"
+isort = "^5.9.3"
 
 [tool.poetry.scripts]
 caiman = "caiman.run:main"
@@ -23,3 +30,19 @@ caiman = "caiman.run:main"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+# Configure pytest options if necessary
+addopts = "--cov=caiman --cov-report=term-missing"
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+ignore = ["E203", "E266", "E501", "W503"]
+exclude = ["build", "dist", "*.egg-info", ".eggs", ".git", ".hg", ".mypy_cache", ".tox", ".venv", "__pycache__"]

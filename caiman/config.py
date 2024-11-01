@@ -1,13 +1,13 @@
+import json
 from dataclasses import asdict, dataclass, field, fields
 from functools import lru_cache
 from hashlib import sha1
-import json
+from pathlib import Path
 from typing import List
+
+import dacite
 import pathspec
 import yaml
-import dacite
-from pathlib import Path
-
 
 IGNORES = [
     ".git",
@@ -21,11 +21,12 @@ DEFAULT_CONF_FILE = Path.cwd() / "caiman.yaml"
 
 
 def config_field(
-        default=IGNORES,
-        default_factory=IGNORES,
-        label=None,
-        project_init=False,
-        metadata=None):
+    default=IGNORES,
+    default_factory=IGNORES,
+    label=None,
+    project_init=False,
+    metadata=None,
+):
     metadata = metadata or {}
     metadata["label"] = label
     metadata["project_init"] = project_init
@@ -79,32 +80,41 @@ class ConfigElement:
 class Workspace(ConfigElement):
     root: str
     build: str = config_field("build/board", label="Build directory", project_init=True)
-    packages: str = config_field("venv/mip-packages", label="Local MIP package directory", project_init=True)
-    tools: str = config_field("venv/tools", label="Local tools directory", project_init=True)
+    packages: str = config_field(
+        "venv/mip-packages", label="Local MIP package directory", project_init=True
+    )
+    tools: str = config_field(
+        "venv/tools", label="Local tools directory", project_init=True
+    )
     plugins: List[str] = field(default_factory=list)
     extra_ignores: List[str] = field(default_factory=lambda: IGNORES)
     use_gitignore: bool = True
 
     def validate(self):
-        for path in [self.get_path(), self.get_build_path(), self.get_package_path(), self.get_tool_path()]:
+        for path in [
+            self.get_path(),
+            self.get_build_path(),
+            self.get_package_path(),
+            self.get_tool_path(),
+        ]:
             if not path.is_relative_to(self.root):
                 raise ValueError(f"Path {path} must be relative to workspace root")
 
-    def get_path(self, folder: str = '') -> Path:
+    def get_path(self, folder: str = "") -> Path:
         if Path(folder).is_absolute():
             raise ValueError(f"Folder path {folder} must not be absolute")
         return Path(self.root) / folder
 
-    def get_build_path(self, folder: str = '') -> Path:
+    def get_build_path(self, folder: str = "") -> Path:
         return self.get_path(self.build) / folder
 
-    def get_build_asset_path(self, is_frozen: bool, folder: str = '') -> Path:
+    def get_build_asset_path(self, is_frozen: bool, folder: str = "") -> Path:
         return self.get_build_path("frozen" if is_frozen else "micropython") / folder
 
-    def get_package_path(self, folder: str = '') -> Path:
+    def get_package_path(self, folder: str = "") -> Path:
         return self.get_path(self.packages) / folder
 
-    def get_tool_path(self, folder: str = '') -> Path:
+    def get_tool_path(self, folder: str = "") -> Path:
         return self.get_path(self.tools) / folder
 
     def get_ignore_patterns(self) -> pathspec.PathSpec:
@@ -168,7 +178,7 @@ class PythonTarget(Target):
 
 
 def _default_path_patterns():
-    return ['**/*.py']
+    return ["**/*.py"]
 
 
 @dataclass(frozen=True, eq=True)
@@ -201,9 +211,7 @@ class FileSource(Target):
 class PythonSource(FileSource, PythonTarget):
     @classmethod
     def default_sources(cls):
-        return [
-            PythonSource(name="micropython", parent="micropython", compile=True)
-        ]
+        return [PythonSource(name="micropython", parent="micropython", compile=True)]
 
     @property
     def container(self):
@@ -235,30 +243,37 @@ class ManifestItem:
 @dataclass(frozen=True, eq=True)
 class Manifest:
     name: str
-    version: str = ''
+    version: str = ""
     items: List[ManifestItem] = field(default_factory=list)
 
     @classmethod
-    def create(cls, package_name: str, version: str, source_root: Path, paths: List[Path]):
+    def create(
+        cls, package_name: str, version: str, source_root: Path, paths: List[Path]
+    ):
         return cls(
             items=[
                 ManifestItem(
                     path=str(path),
                     sha1=str(sha1(Path(source_root / path).read_bytes()).hexdigest()),
-                    size=Path(source_root / path).stat().st_size
-                ) for path in paths
+                    size=Path(source_root / path).stat().st_size,
+                )
+                for path in paths
             ],
             name=package_name,
-            version=version
+            version=version,
         )
 
     @classmethod
     def load(cls, path: Path, package_name: str):
         """
         Load the manifest for the source files."""
-        json_manifest = json.loads(path.read_text()).get(package_name, {}) if path.exists() else {}
-        return dacite.from_dict(data_class=Manifest, data=dict(name=package_name, **json_manifest))
-    
+        json_manifest = (
+            json.loads(path.read_text()).get(package_name, {}) if path.exists() else {}
+        )
+        return dacite.from_dict(
+            data_class=Manifest, data=dict(name=package_name, **json_manifest)
+        )
+
     def save(self, path: Path):
         """
         Save the manifest for the source files."""
