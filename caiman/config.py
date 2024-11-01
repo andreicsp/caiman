@@ -167,9 +167,13 @@ class PythonTarget(Target):
         return m
 
 
+def _default_path_patterns():
+    return ['**/*.py']
+
+
 @dataclass(frozen=True, eq=True)
 class FileSource(Target):
-    files: List[str] = field(default_factory=list)
+    files: List[str] = field(default_factory=_default_path_patterns)
     parent: str = ""
     version: str = ""
 
@@ -197,7 +201,9 @@ class FileSource(Target):
 class PythonSource(FileSource, PythonTarget):
     @classmethod
     def default_sources(cls):
-        return [PythonSource(name="micropython", compile=True)]
+        return [
+            PythonSource(name="micropython", parent="micropython", compile=True)
+        ]
 
     @property
     def container(self):
@@ -278,7 +284,7 @@ class Config:
 
     @classmethod
     def default(cls) -> "Config":
-        return cls(workspace=Workspace(root=str(Path.cwd() / DEFAULT_CONF_FILE)))
+        return cls(workspace=Workspace(root=str(Path.cwd())))
 
     @classmethod
     def load(cls, path: str = "") -> "Config":

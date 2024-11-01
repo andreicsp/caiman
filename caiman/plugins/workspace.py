@@ -35,17 +35,39 @@ class WorkspaceInitGoal(Goal):
             _logger.info(f"Updating config file: {DEFAULT_CONF_FILE}")
 
         _logger.info("Project details:")
+        print(f"Root: {self.config.workspace.root}")
         app = _updated_config_from_input(self.config.application)
     
         _logger.info("Workspace structure:")
         workspace = _updated_config_from_input(self.config.workspace)
         self.config = dataclasses.replace(
-            self.config, 
+            self.config,
             application=app,
             workspace=workspace
         )
         self.config.save(path=DEFAULT_CONF_FILE)
-        _logger.info(f"Config file created: {DEFAULT_CONF_FILE}")
+        build_path = self.config.workspace.get_build_path()
+        if not build_path.exists():
+            build_path.mkdir(parents=True)
+            _logger.info(f"Build directory created: {build_path}")
+
+        package_path = self.config.workspace.get_package_path()
+        if not package_path.exists():
+            package_path.mkdir(parents=True)
+            _logger.info(f"Local package directory created: {package_path}")
+
+        tool_path = self.config.workspace.get_tool_path()
+        if not tool_path.exists():
+            tool_path.mkdir(parents=True)
+            _logger.info(f"Local tools directory created: {tool_path}")
+
+        for source in self.config.sources:
+            source_path = self.config.workspace.get_path(source.parent)
+            if not source_path.exists():
+                source_path.mkdir(parents=True)
+                _logger.info(f"Source directory created: {source_path}")
+
+        _logger.info("Project initialized")
 
 
 class WorkspacePlugin(Plugin):

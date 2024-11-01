@@ -13,8 +13,6 @@ from caiman.plugins.base import Goal, Plugin, fail, param
 from caiman.plugins.installer import MIPInstallerPlugin
 from caiman.target import CopyTask, WorkspaceDependencyArtifact, WorkspaceSource
 
-_logger = logging.getLogger(__name__)
-
 
 @dataclass
 class BuildCommand:
