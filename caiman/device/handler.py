@@ -102,8 +102,8 @@ class DeviceHandler:
         if not func_module or not func_module.__file__:
             raise ImportError(f"Could not import module {func.__module__}")
 
-        import_mod = func.__module__.rsplit(".", 1)[1]
-        mount_path = Path(func_module.__file__).parent
+        import_mod = func.__module__.split(".", 2)[-1]
+        mount_path = Path(func_module.__file__).parent.parent
         func_name = func.__name__
 
         code = []

@@ -177,13 +177,9 @@ class PythonTarget(Target):
         return m
 
 
-def _default_path_patterns():
-    return ["**/*.py"]
-
-
 @dataclass(frozen=True, eq=True)
 class FileSource(Target):
-    files: List[str] = field(default_factory=_default_path_patterns)
+    files: List[str] = field(default_factory=list)
     parent: str = ""
     version: str = ""
 
@@ -207,8 +203,14 @@ class FileSource(Target):
                 raise ValueError(f"File path {file} must be relative")
 
 
+def _default_python_path_patterns():
+    return ["**/*.py"]
+
+
 @dataclass(frozen=True, eq=True)
 class PythonSource(FileSource, PythonTarget):
+    files: List[str] = field(default_factory=_default_python_path_patterns)
+
     @classmethod
     def default_sources(cls):
         return [PythonSource(name="micropython", parent="micropython", compile=True)]
@@ -227,6 +229,7 @@ class Dependency(PythonSource):
     name: str
     version: str = "latest"
     channel: str = None
+    files: List[str] = field(default_factory=list)
 
     @property
     def manifest_folder(self) -> Path:

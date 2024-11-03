@@ -9,7 +9,12 @@ from typing import Tuple
 from caiman.config import Command, Config
 from caiman.plugins.base import Goal, Plugin, fail, param
 from caiman.plugins.installer import MIPInstallerPlugin
-from caiman.target import CopyTask, WorkspaceDependencyArtifact, WorkspaceSource
+from caiman.target import (
+    CopyTask,
+    WorkspaceDependencyArtifact,
+    WorkspaceSource,
+    WorkspaceToolArtifact,
+)
 
 
 @dataclass
@@ -161,6 +166,19 @@ class DependencyBuilder(SourceBuilder):
             return super()._build(workspace_source, command=command)
 
 
+class ToolBuilder(DependencyBuilder):
+    @property
+    def name(self):
+        return "tools"
+
+    @property
+    def buildables(self):
+        yield from [
+            WorkspaceToolArtifact(workspace=self.config.workspace, source=source)
+            for source in self.config.tools
+        ]
+
+
 class BuildGoal(Goal):
     @property
     def help(self):
@@ -179,6 +197,7 @@ class BuildGoal(Goal):
             ResourceBuilder(self.config),
             SourceBuilder(self.config),
             DependencyBuilder(self.config),
+            ToolBuilder(self.config),
         )
 
     def clean(self):

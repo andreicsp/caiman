@@ -104,8 +104,9 @@ class WorkspaceSource:
         patterns = self.source.files if self.source.files else ["**/*"]
         for pattern in patterns:
             for path in Path(self.source_root).rglob(pattern):
-                if not self.ignores or not self.ignores.match_file(str(path)):
-                    yield path.relative_to(self.source_root)
+                if path.is_file():
+                    if not self.ignores or not self.ignores.match_file(str(path)):
+                        yield path.relative_to(self.source_root)
 
     @property
     def suffix_map(self):
@@ -141,6 +142,16 @@ class WorkspaceSource:
             version=self.source.version,
             source_root=self.target_root,
             paths=list(self.get_target_files()),
+        )
+
+    def create_source_manifest(self) -> Manifest:
+        """
+        Create a manifest for the target files."""
+        return Manifest.create(
+            package_name=self.source.package_name,
+            version=self.source.version,
+            source_root=self.source_root,
+            paths=list(self.get_source_files()),
         )
 
     def load_manifest(self) -> Manifest:

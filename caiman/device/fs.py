@@ -1,18 +1,37 @@
+"""
+Run file system operations on the device.
+"""
 import json
 from pathlib import Path
 
 from caiman.device.handler import CommandError, DeviceHandler
-from caiman.mount import fs
+from caiman.remote.caiman import fs
 
 
 class FileSystem:
+    """
+    Manage file system operations on the device.
+    """
+
     def __init__(self, device: DeviceHandler):
+        """
+        :param device: DeviceHandler instance to run device commands
+        """
         self.device = device
 
-    def walk(self, path):
+    def walk(self, path) -> list[str]:
+        """
+        Recursively walk the file system starting at the given path.
+        :param path: Path to the parent directory to walk
+        :return: List of file paths
+        """
         return self.device.run_vfs_python_func(fs.walk, parent=path)
 
     def rmtree(self, path):
+        """
+        Recursively remove the given path.
+        :param path: Path to remove
+        """
         return self.device.run_vfs_python_func(fs.rmtree, parent=path)
 
     def upload(self, src, dst, cwd=None):

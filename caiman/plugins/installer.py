@@ -101,8 +101,7 @@ class InstallGoal(Goal):
                 install_path=str(artifact.source_root),
                 target=str(target),
             )
-
-        manifest = artifact.create_manifest()
+        manifest = artifact.create_source_manifest()
         artifact.save_manifest(manifest)
 
         for copy_task in artifact.get_copy_tasks():
