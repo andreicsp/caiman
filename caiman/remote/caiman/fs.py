@@ -5,6 +5,33 @@ Compatible micropython code
 import os
 
 
+def resolve_path(relative_path):
+    """
+    Resolve a relative path to an absolute path.
+    """
+    if relative_path.startswith('/'):
+        return relative_path
+    # Get the current working directory
+    cwd = os.getcwd()
+    # Split the working directory and the relative path into components
+    path_parts = cwd.split('/') + relative_path.split('/')
+    
+    # Resolve '.' and '..' manually
+    resolved_parts = []
+    for part in path_parts:
+        if part == '.' or part == '':
+            continue
+        elif part == '..':
+            if resolved_parts:
+                resolved_parts.pop()
+        else:
+            resolved_parts.append(part)
+    
+    # Join the resolved parts to form the absolute path
+    absolute_path = '/' + '/'.join(resolved_parts)
+    return absolute_path
+
+
 def iwalk(parent):
     """
     Recursively walk the filesystem starting from the parent directory.
@@ -50,6 +77,7 @@ def rmtree(parent):
     files = []
     cwd = os.getcwd()
     for path in iwalk(parent):
+        path = resolve_path(path)
         if path.startswith(cwd) or cwd.startswith(path):
             continue
         os.remove(path)

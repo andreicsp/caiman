@@ -1,7 +1,6 @@
-import json
+import os
 from dataclasses import asdict, dataclass, field, fields
 from functools import lru_cache
-from hashlib import sha1
 from pathlib import Path
 from typing import List
 
@@ -108,6 +107,12 @@ class Workspace(ConfigElement):
     def get_build_path(self, folder: str = "") -> Path:
         return self.get_path(self.build) / folder
 
+    def get_artifact_path(self, folder: str = "") -> Path:
+        return self.get_build_path("artifacts") / folder
+
+    def get_manifest_path(self, folder: str = "") -> Path:
+        return self.get_build_path("manifests") / folder
+
     def get_build_asset_path(self, is_frozen: bool, folder: str = "") -> Path:
         return self.get_build_path("frozen" if is_frozen else "micropython") / folder
 
@@ -155,10 +160,6 @@ class Target(ConfigElement):
     def is_frozen(self):
         return False
 
-    @property
-    def suffix_map(self):
-        return {}
-
 
 @dataclass(frozen=True, eq=True)
 class PythonTarget(Target):
@@ -169,13 +170,6 @@ class PythonTarget(Target):
     def is_frozen(self):
         return self.frozen
 
-    @property
-    def suffix_map(self):
-        m = {}
-        if self.compile:
-            m[".py"] = ".mpy"
-        return m
-
 
 @dataclass(frozen=True, eq=True)
 class FileSource(Target):
@@ -185,15 +179,11 @@ class FileSource(Target):
 
     @property
     def package_name(self):
-        return self.name.rsplit("/", 1)[-1]
+        return os.path.join(*self.name.split(":"))
 
     @property
     def container(self):
         return "micropython"
-
-    @property
-    def manifest_folder(self) -> Path:
-        return Path("resources")
 
     def validate(self):
         if Path(self.parent).is_absolute():
@@ -219,10 +209,6 @@ class PythonSource(FileSource, PythonTarget):
     def container(self):
         return super().container if not self.frozen else "frozen"
 
-    @property
-    def manifest_folder(self) -> Path:
-        return Path("sources")
-
 
 @dataclass(frozen=True, eq=True)
 class Dependency(PythonSource):
@@ -230,62 +216,6 @@ class Dependency(PythonSource):
     version: str = "latest"
     channel: str = None
     files: List[str] = field(default_factory=list)
-
-    @property
-    def manifest_folder(self) -> Path:
-        return Path("dependencies")
-
-
-@dataclass(frozen=True, eq=True)
-class ManifestItem:
-    path: str
-    sha1: str
-    size: int
-
-
-@dataclass(frozen=True, eq=True)
-class Manifest:
-    name: str
-    version: str = ""
-    items: List[ManifestItem] = field(default_factory=list)
-
-    @classmethod
-    def create(
-        cls, package_name: str, version: str, source_root: Path, paths: List[Path]
-    ):
-        return cls(
-            items=[
-                ManifestItem(
-                    path=str(path),
-                    sha1=str(sha1(Path(source_root / path).read_bytes()).hexdigest()),
-                    size=Path(source_root / path).stat().st_size,
-                )
-                for path in paths
-            ],
-            name=package_name,
-            version=version,
-        )
-
-    @classmethod
-    def load(cls, path: Path, package_name: str):
-        """
-        Load the manifest for the source files."""
-        json_manifest = (
-            json.loads(path.read_text()).get(package_name, {}) if path.exists() else {}
-        )
-        return dacite.from_dict(
-            data_class=Manifest, data=dict(name=package_name, **json_manifest)
-        )
-
-    def save(self, path: Path):
-        """
-        Save the manifest for the source files."""
-        manifest_dict = asdict(self)
-        json_dict = {
-            manifest_dict.pop("name"): manifest_dict,
-        }
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(json_dict, indent=2))
 
 
 @dataclass

@@ -1,19 +1,16 @@
 import logging
 import shutil
-import subprocess
-import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Tuple
 
 from caiman.config import Command, Config
-from caiman.plugins.base import Goal, Plugin, fail, param
+from caiman.plugins.base import Goal, Plugin, param
 from caiman.plugins.installer import MIPInstallerPlugin
-from caiman.target import (
-    CopyTask,
+from caiman.source import (
     WorkspaceDependencyArtifact,
     WorkspaceSource,
-    WorkspaceToolArtifact,
+    WorkspaceToolArtifact, WorkspacePythonSource,
 )
 
 
@@ -89,22 +86,13 @@ class ResourceBuilder(Builder):
             for source in self.config.resources
         ]
 
-    def _copy_task(self, task: CopyTask):
-        self._logger.info(f"Copying {task.rel_source_path} to {task.rel_target_path}")
-
-        task.target_file.parent.mkdir(parents=True, exist_ok=True)
-        task.target_file.write_bytes(task.source_file.read_bytes())
-
     def _build(self, source: WorkspaceSource, command: BuildCommand):
         self._logger.info(f"Building {source.source.name}")
-        for task in source.get_copy_tasks():
-            self._copy_task(task)
-
-        manifest = source.create_manifest()
-        source.save_manifest(manifest)
-        self._logger.info(
-            f"Manifest saved to {source.workspace.get_relative_path(source.manifest_path)}"
-        )
+        source.manifests.save(source.create_manifest())
+        deployment = source.create_deployment()
+        manifest = deployment(logger=self._logger)
+        self._logger.info(f"Saving {source.source.name} manifest")
+        deployment.manifests.save(manifest)
 
 
 class SourceBuilder(ResourceBuilder):
@@ -115,35 +103,9 @@ class SourceBuilder(ResourceBuilder):
     @property
     def buildables(self):
         yield from [
-            WorkspaceSource(workspace=self.config.workspace, source=source)
+            WorkspacePythonSource(workspace=self.config.workspace, source=source)
             for source in self.config.sources
         ]
-
-    def _compile_file(self, task: CopyTask):
-        self._logger.info(f"Compiling {task.rel_source_path} to {task.rel_target_path}")
-
-        task.target_file.parent.mkdir(parents=True, exist_ok=True)
-        command = [
-            sys.executable,
-            "-m",
-            "mpy_cross_v6",
-            str(task.source_file),
-            "-o",
-            str(task.target_file),
-        ]
-        try:
-            subprocess.run(command, check=True, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            self._logger.error(
-                f"Command '{command}' returned non-zero exit status {e.returncode}."
-            )
-            fail(f"Error output: {e.stderr.decode('utf-8')}")
-
-    def _copy_task(self, task: CopyTask):
-        if task.source_file.suffix == ".py" and task.source.compile:
-            self._compile_file(task)
-        else:
-            super()._copy_task(task)
 
 
 class DependencyBuilder(SourceBuilder):
@@ -196,8 +158,8 @@ class BuildGoal(Goal):
         return (
             ResourceBuilder(self.config),
             SourceBuilder(self.config),
-            DependencyBuilder(self.config),
-            ToolBuilder(self.config),
+            #DependencyBuilder(self.config),
+            #ToolBuilder(self.config),
         )
 
     def clean(self):
@@ -221,6 +183,7 @@ class BuildGoal(Goal):
                 try:
                     builder(goal_command)
                 except Exception as e:
+                    raise
                     self.fail(str(e))
 
 

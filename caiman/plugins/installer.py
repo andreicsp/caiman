@@ -7,11 +7,10 @@ from pathlib import Path
 from caiman.config import Command, Config, Dependency
 from caiman.device.handler import DeviceHandler
 from caiman.plugins.base import Goal, Plugin, fail, param
-from caiman.target import (
-    WorkspaceArtifact,
+from caiman.source import (
     WorkspaceDependencyArtifact,
     WorkspaceSource,
-    WorkspaceToolArtifact,
+    WorkspaceToolArtifact, WorkspaceArtifact,
 )
 
 
@@ -71,7 +70,7 @@ class InstallGoal(Goal):
     def install(
         self, artifact: WorkspaceArtifact, force: bool = False
     ) -> WorkspaceSource:
-        parent = artifact.source_root
+        parent = artifact.root
         channel = self.config.get_channel(artifact.source.channel)
         install_names = (
             [artifact.source.name]
@@ -84,7 +83,7 @@ class InstallGoal(Goal):
             else [Path(f).parent for f in artifact.source.files]
         )
 
-        current_manifest = artifact.load_manifest()
+        current_manifest = artifact.load_source_manifest()
         if current_manifest.version == artifact.source.version and not force:
             self.info(
                 f"Dependency {artifact.source.name} ({artifact.source.version}) is already installed"
@@ -98,14 +97,14 @@ class InstallGoal(Goal):
                 name=name,
                 version=artifact.source.version,
                 index=channel.index,
-                install_path=str(artifact.source_root),
+                install_path=str(artifact.root),
                 target=str(target),
             )
         manifest = artifact.create_source_manifest()
-        artifact.save_manifest(manifest)
+        artifact.save_source_manifest(manifest)
 
         for copy_task in artifact.get_copy_tasks():
-            copy_task.target_file.parent.mkdir(parents=True, exist_ok=True)
+            copy_task.target_file.folder.mkdir(parents=True, exist_ok=True)
             copy_task.target_file.write_bytes(copy_task.source_file.read_bytes())
             copy_task.source_file.unlink()
 
