@@ -28,6 +28,12 @@ class WorkspaceSource:
             )
 
     @property
+    def name(self):
+        """
+        The name of the source files."""
+        return self.source.name
+
+    @property
     def root(self) -> Path:
         """
         The root directory of the source files."""

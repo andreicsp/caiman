@@ -66,7 +66,7 @@ class DeviceHandler:
 
         cmd.extend(list(args))
         cmd.extend(["+", "disconnect"])
-        _logger.info(f"Running command: {' '.join(cmd)}")
+        _logger.debug(f"Running command: {' '.join(cmd)}")
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd
         )

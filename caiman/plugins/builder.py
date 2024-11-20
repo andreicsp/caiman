@@ -5,12 +5,11 @@ from dataclasses import dataclass
 from typing import Tuple
 
 from caiman.config import Command, Config
+from caiman.installer import DependencyInstaller, ToolInstaller
 from caiman.plugins.base import Goal, Plugin, param
 from caiman.plugins.installer import MIPInstallerPlugin
 from caiman.source import (
-    WorkspaceDependencyArtifact,
-    WorkspaceSource,
-    WorkspaceToolArtifact, WorkspacePythonSource,
+    WorkspaceSource, WorkspacePythonSource,
 )
 
 
@@ -116,17 +115,12 @@ class DependencyBuilder(SourceBuilder):
     @property
     def buildables(self):
         yield from [
-            WorkspaceDependencyArtifact(workspace=self.config.workspace, source=source)
-            for source in self.config.dependencies
+            DependencyInstaller(config=self.config, dependency=dependency)
+            for dependency in self.config.dependencies
         ]
 
-    def _build(self, source: WorkspaceDependencyArtifact, command: BuildCommand):
-        workspace_source = MIPInstallerPlugin(self.config).install(
-            source, force=command.force
-        )
-        if workspace_source:
-            return super()._build(workspace_source, command=command)
-
+    def _build(self, dependency: DependencyInstaller, command: BuildCommand):
+        return dependency(force=command.force, logger=self._logger)
 
 class ToolBuilder(DependencyBuilder):
     @property
@@ -136,8 +130,8 @@ class ToolBuilder(DependencyBuilder):
     @property
     def buildables(self):
         yield from [
-            WorkspaceToolArtifact(workspace=self.config.workspace, source=source)
-            for source in self.config.tools
+            ToolInstaller(config=self.config, dependency=dependency)
+            for dependency in self.config.tools
         ]
 
 
@@ -158,8 +152,8 @@ class BuildGoal(Goal):
         return (
             ResourceBuilder(self.config),
             SourceBuilder(self.config),
-            #DependencyBuilder(self.config),
-            #ToolBuilder(self.config),
+            DependencyBuilder(self.config),
+            ToolBuilder(self.config),
         )
 
     def clean(self):
@@ -183,7 +177,6 @@ class BuildGoal(Goal):
                 try:
                     builder(goal_command)
                 except Exception as e:
-                    raise
                     self.fail(str(e))
 
 

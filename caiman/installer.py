@@ -31,7 +31,8 @@ class DependencyInstaller:
     def manifests(self):
         return DependencyManifestRegistry(workspace=self.workspace, asset_type="source")
 
-    def get_source(self) -> WorkspaceSource:
+    @property
+    def source(self) -> WorkspaceSource:
         return WorkspaceDependencySource(workspace=self.workspace, source=self.dependency)
 
     def create_manifest(self):
@@ -99,7 +100,7 @@ class DependencyInstaller:
     def __call__(self, force=False, logger=None):
         logger = logger or _logger
         self.install(force=force, logger=logger)
-        source = self.get_source()
+        source = self.source
         deployment = source.create_deployment()
         if deployment:
             deployment(logger=logger)
@@ -119,5 +120,6 @@ class ToolInstaller(DependencyInstaller):
     def manifests(self):
         return ToolManifestRegistry(workspace=self.workspace, asset_type="source")
 
-    def get_source(self) -> WorkspaceSource:
+    @property
+    def source(self) -> WorkspaceSource:
         return WorkspaceToolSource(workspace=self.workspace, source=self.dependency)
