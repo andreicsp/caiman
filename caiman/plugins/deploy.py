@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from caiman.config import Command, Config
 from caiman.device.fs import FileSystem
-from caiman.device.handler import DeviceHandler
+from caiman.proc.device import DeviceMicroPythonProcess
 from caiman.plugins.base import Goal, Plugin
 
 
@@ -42,7 +42,7 @@ class DeployGoal(Goal):
 class DeployPlugin(Plugin):
     def __init__(self, config: Config):
         super().__init__(config=config)
-        self._fs = FileSystem(device=DeviceHandler(config=config))
+        self._fs = FileSystem(device=DeviceMicroPythonProcess(config=config))
 
     def get_goals(self):
         return (DeployGoal(config=self.config, fs=self._fs),)

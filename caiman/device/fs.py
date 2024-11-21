@@ -4,7 +4,8 @@ Run file system operations on the device.
 import json
 from pathlib import Path
 
-from caiman.device.handler import CommandError, DeviceHandler
+from caiman.proc.device import DeviceMicroPythonProcess
+from caiman.proc.base import CommandError
 from caiman.remote.caiman import fs
 
 
@@ -13,7 +14,7 @@ class FileSystem:
     Manage file system operations on the device.
     """
 
-    def __init__(self, device: DeviceHandler):
+    def __init__(self, device: DeviceMicroPythonProcess):
         """
         :param device: DeviceHandler instance to run device commands
         """

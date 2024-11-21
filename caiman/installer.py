@@ -2,11 +2,12 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from caiman.config import Workspace, Dependency, Config
-from caiman.device.handler import DeviceHandler
+from caiman.config import Dependency, Config
 from caiman.manifest import DependencyManifestRegistry, ManifestItem, Manifest, ToolManifestRegistry
+from caiman.proc.base import MicroPythonProcess
+from caiman.proc.local import LocalMicroPythonProcess
 from caiman.source import WorkspaceSource, WorkspaceDependencySource, WorkspaceToolSource
-from caiman.task import MIPTask, CopyTask, MoveTask
+from caiman.task import MIPTask, MoveTask
 
 _logger = logging.getLogger(__name__)
 
@@ -57,18 +58,22 @@ class DependencyInstaller:
             if not self.dependency.files
             else [Path(f).parent for f in self.dependency.files]
         )
-        names_by_target = {}
+        packages_by_target = {}
         for name, target in zip(install_names, install_targets):
-            names_by_target.setdefault(target, []).append(f"{name}@{self.dependency.version}")
+            packages_by_target.setdefault(target, {})[name] = self.dependency.version
 
-        for target, names in names_by_target.items():
-            yield MIPTask(
+        for target, packages in packages_by_target.items():
+            yield from MIPTask.from_package_dict(
                 workspace=self.workspace,
-                packages=names,
+                packages=packages,
                 index=channel.index,
                 root=self.artifact_root,
                 target=target,
             )
+
+    @property
+    def handler(self) -> MicroPythonProcess:
+        return LocalMicroPythonProcess()
 
     def install(self, force=False, logger=None):
         logger = logger or _logger
@@ -77,11 +82,9 @@ class DependencyInstaller:
             logger.info(f"Dependency {self.dependency.name} ({self.dependency.version}) is already installed")
             return manifest
 
-        device = DeviceHandler(self.config)
-
         for task in self.get_tasks():
             logger.info(f"{task}")
-            task(device=device)
+            task(device=self.handler)
 
         manifest = self.create_manifest()
         self.manifests.save(manifest)

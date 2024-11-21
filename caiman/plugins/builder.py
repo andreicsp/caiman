@@ -7,7 +7,6 @@ from typing import Tuple
 from caiman.config import Command, Config
 from caiman.installer import DependencyInstaller, ToolInstaller
 from caiman.plugins.base import Goal, Plugin, param
-from caiman.plugins.installer import MIPInstallerPlugin
 from caiman.source import (
     WorkspaceSource, WorkspacePythonSource,
 )
@@ -177,6 +176,7 @@ class BuildGoal(Goal):
                 try:
                     builder(goal_command)
                 except Exception as e:
+                    self._logger.exception(f"Error building {builder.name}: {e}")
                     self.fail(str(e))
 
 

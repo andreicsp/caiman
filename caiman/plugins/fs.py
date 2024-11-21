@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from caiman.config import Command
 from caiman.device.fs import FileSystem
-from caiman.device.handler import DeviceHandler
+from caiman.proc.device import DeviceMicroPythonProcess
 from caiman.plugins.base import Goal, Plugin, param
 
 
@@ -101,7 +101,7 @@ class GetJsonGoal(FileSystemGoal):
 class FileSystemPlugin(Plugin):
     def __init__(self, config):
         super().__init__(config)
-        self._fs = FileSystem(device=DeviceHandler(config=config))
+        self._fs = FileSystem(device=DeviceMicroPythonProcess(config=config.device))
 
     def get_goals(self):
         return (

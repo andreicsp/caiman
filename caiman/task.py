@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from caiman.config import Workspace
-from caiman.device.handler import DeviceHandler
+from caiman.proc.device import DeviceMicroPythonProcess
+
+from caiman.proc.base import MicroPythonProcess
 
 
 @dataclass(frozen=True, eq=True)
@@ -14,6 +16,7 @@ class Task(ABC):
     Class for defining a copy task between two paths.
     """
     workspace: Workspace
+
     @abstractmethod
     def __call__(self, *args, **kwargs):
         pass
@@ -44,6 +47,7 @@ class CopyTask(Task):
     def __str__(self):
         return f"[{self.__class__.__name__}] {self.rel_source_path} -> {self.rel_target_path}"
 
+
 @dataclass(frozen=True, eq=True)
 class MoveTask(CopyTask):
     def __call__(self, *args, **kwargs):
@@ -57,6 +61,7 @@ class CompileTask(CopyTask):
     """
     Class for defining a compile task between two paths.
     """
+
     def __call__(self, *args, **kwargs):
         self.target_file.parent.mkdir(parents=True, exist_ok=True)
         command = [
@@ -73,35 +78,29 @@ class MIPTask(Task):
     Class for defining a MIP task between two paths.
     """
     index: str
-    packages: list
+    packages: tuple
     root: Path
     target: Path = ''
 
-    def __call__(self, *args, device: DeviceHandler, **kwargs):
-        target = "/remote"
-        if self.target:
-            target += f"/{self.target}"
-
-        command = [
-            "mip", "--no-mpy",
-            "--index", self.index,
-            "--target", str(target),
-            "install"] + self.packages
+    def __call__(self, *args, device: MicroPythonProcess, **kwargs):
         local_parent = self.root / self.target
         local_parent.mkdir(parents=True, exist_ok=True)
-        return device.run_mp_remote_cmd(*command, mount_path=str(self.root))
+        target = self.root / self.target
+        return device.mip_install(
+            index=self.index, target=str(target), packages=dict(self.packages), no_mpy=True
+        )
 
     @classmethod
     def from_package_dict(cls, packages: dict, workspace: Workspace, index: str, root: Path, target: Path):
         return [MIPTask(
             workspace=workspace,
             index=index,
-            packages=[f"{k}@{v}" for k, v in packages.items()],
+            packages=tuple(packages.items()),
             root=root,
             target=target,
         )]
 
     def __str__(self):
         local_target = self.root / self.target
-        package_info = ", ".join(self.packages)
+        package_info = ", ".join(map('@'.join, self.packages))
         return f"[{self.__class__.__name__}] {package_info} -> {local_target}"
