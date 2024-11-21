@@ -4,8 +4,8 @@ Run file system operations on the device.
 import json
 from pathlib import Path
 
-from caiman.proc.device import DeviceMicroPythonProcess
 from caiman.proc.base import CommandError
+from caiman.proc.device import DeviceMicroPythonProcess
 from caiman.remote.caiman import fs
 
 

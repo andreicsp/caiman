@@ -9,26 +9,26 @@ def resolve_path(relative_path):
     """
     Resolve a relative path to an absolute path.
     """
-    if relative_path.startswith('/'):
+    if relative_path.startswith("/"):
         return relative_path
     # Get the current working directory
     cwd = os.getcwd()
     # Split the working directory and the relative path into components
-    path_parts = cwd.split('/') + relative_path.split('/')
-    
+    path_parts = cwd.split("/") + relative_path.split("/")
+
     # Resolve '.' and '..' manually
     resolved_parts = []
     for part in path_parts:
-        if part == '.' or part == '':
+        if part == "." or part == "":
             continue
-        elif part == '..':
+        elif part == "..":
             if resolved_parts:
                 resolved_parts.pop()
         else:
             resolved_parts.append(part)
-    
+
     # Join the resolved parts to form the absolute path
-    absolute_path = '/' + '/'.join(resolved_parts)
+    absolute_path = "/" + "/".join(resolved_parts)
     return absolute_path
 
 

@@ -18,6 +18,7 @@ class CommandError(Exception):
             output.append(f"stderr:\n{self.stderr.decode()}")
         return "\n".join(output)
 
+
 class MicroPythonProcess(ABC):
     @abstractmethod
     def mip_install(self, index: str, target: str, packages: dict, no_mpy):
@@ -40,9 +41,7 @@ def follow_subprocess(proc):
             if fd == proc.stdout.fileno():
                 output = proc.stdout.readline()
                 if output:
-                    output = (
-                        output.decode() if isinstance(output, bytes) else output
-                    )
+                    output = output.decode() if isinstance(output, bytes) else output
                     sys.stdout.write(output)
                     sys.stdout.flush()
             if fd == proc.stderr.fileno():

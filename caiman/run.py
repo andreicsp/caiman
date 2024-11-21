@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import Tuple
 
 from caiman.config import DEFAULT_CONF_FILE, Command, Config
-from caiman.proc.base import CommandError
 from caiman.loader import get_pre_init_plugins, load_plugins
 from caiman.plugins.base import Goal, Plugin, fail
+from caiman.proc.base import CommandError
 
 _logger = logging.getLogger("caiman")
 

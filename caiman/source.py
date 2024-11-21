@@ -7,10 +7,20 @@ from pathlib import Path
 
 from pathspec import PathSpec
 
-from caiman.config import Dependency, FileSource, Workspace, PythonSource
-from caiman.deployment import Deployment, PythonDeployment, DependencyDeployment, ToolDeployment
-from caiman.manifest import ManifestRegistry, Manifest, ManifestItem, ResourceManifestRegistry, SourceManifestRegistry, \
-    DependencyManifestRegistry, ToolManifestRegistry
+from caiman.config import Dependency, FileSource, PythonSource, Workspace
+from caiman.deployment import (
+    DependencyDeployment,
+    Deployment,
+    PythonDeployment,
+)
+from caiman.manifest import (
+    DependencyManifestRegistry,
+    Manifest,
+    ManifestItem,
+    ResourceManifestRegistry,
+    SourceManifestRegistry,
+    ToolManifestRegistry,
+)
 
 
 @dataclass(frozen=True, eq=True)
@@ -18,6 +28,7 @@ class WorkspaceSource:
     """
     Base class for defining a source of files in a workspace.
     """
+
     workspace: Workspace
     source: FileSource
 
@@ -94,6 +105,7 @@ class WorkspaceSource:
 @dataclass(frozen=True, eq=True)
 class WorkspacePythonSource(WorkspaceSource):
     source: PythonSource
+
     @property
     def manifests(self):
         return SourceManifestRegistry(workspace=self.workspace, asset_type="source")
@@ -109,6 +121,7 @@ class WorkspacePythonSource(WorkspaceSource):
             is_frozen=self.source.is_frozen,
             compile=self.source.compile,
         )
+
 
 @dataclass(frozen=True, eq=True)
 class WorkspaceDependencySource(WorkspaceSource):
@@ -144,7 +157,6 @@ class WorkspaceDependencySource(WorkspaceSource):
 
 @dataclass(frozen=True, eq=True)
 class WorkspaceToolSource(WorkspaceDependencySource):
-
     @property
     def manifests(self):
         return ToolManifestRegistry(workspace=self.workspace, asset_type="source")
@@ -158,4 +170,3 @@ class WorkspaceToolSource(WorkspaceDependencySource):
         Create a deployment for the source files.
         """
         return None
-

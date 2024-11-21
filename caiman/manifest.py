@@ -1,12 +1,10 @@
-from abc import abstractmethod
+import json
 from dataclasses import asdict, dataclass, field
 from hashlib import sha1
-import json
 from pathlib import Path
+from typing import List
 
 import dacite
-
-from typing import List
 
 from caiman.config import Workspace
 
@@ -30,9 +28,10 @@ class ManifestItem:
         return [cls.create(path, source_root) for path in paths]
 
     def is_file_changed(self, path: Path) -> bool:
-        return (not path.exists() or
-                self.size != path.stat().st_size or
-                self.sha1 != sha1(path.read_bytes()).hexdigest()
+        return (
+            not path.exists()
+            or self.size != path.stat().st_size
+            or self.sha1 != sha1(path.read_bytes()).hexdigest()
         )
 
 
@@ -64,12 +63,10 @@ class ManifestRegistry:
         Load the manifest for the source files."""
         path = self.get_manifest_path(package)
         if path.exists():
-            json_manifest = (
-                json.loads(path.read_text()).get(package, {})
-            )
+            json_manifest = json.loads(path.read_text()).get(package, {})
             return dacite.from_dict(
                 data_class=Manifest,
-                data=dict(parent=self.folder, name=package, **json_manifest)
+                data=dict(parent=self.folder, name=package, **json_manifest),
             )
 
     def save(self, manifest: Manifest):

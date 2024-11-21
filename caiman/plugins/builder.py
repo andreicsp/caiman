@@ -7,9 +7,7 @@ from typing import Tuple
 from caiman.config import Command, Config
 from caiman.installer import DependencyInstaller, ToolInstaller
 from caiman.plugins.base import Goal, Plugin, param
-from caiman.source import (
-    WorkspaceSource, WorkspacePythonSource,
-)
+from caiman.source import WorkspacePythonSource, WorkspaceSource
 
 
 @dataclass
@@ -120,6 +118,7 @@ class DependencyBuilder(SourceBuilder):
 
     def _build(self, dependency: DependencyInstaller, command: BuildCommand):
         return dependency(force=command.force, logger=self._logger)
+
 
 class ToolBuilder(DependencyBuilder):
     @property

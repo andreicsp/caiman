@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Callable
 
 from caiman.config import Device
-from caiman.proc.base import CommandError, follow_subprocess, MicroPythonProcess
+from caiman.proc.base import CommandError, MicroPythonProcess, follow_subprocess
 
 _logger = logging.getLogger("device")
 
-class DeviceMicroPythonProcess(MicroPythonProcess):
 
+class DeviceMicroPythonProcess(MicroPythonProcess):
     def __init__(self, config: Device, mount_path: str = None):
         self.config = config
         self.mount_path = mount_path
@@ -20,9 +20,8 @@ class DeviceMicroPythonProcess(MicroPythonProcess):
     def mip_install(self, index: str, target: str, packages: dict, no_mpy):
         command = ["mip"]
         command += ["--no-mpy"] if no_mpy else []
-        command += ["--index", self.index,
-            "--target", str(target),
-            "install"] + ['@'.join(package) for package in self.packages
+        command += ["--index", self.index, "--target", str(target), "install"] + [
+            "@".join(package) for package in self.packages
         ]
         return self.run_mp_remote_cmd(*command)
 
@@ -77,7 +76,11 @@ class DeviceMicroPythonProcess(MicroPythonProcess):
         code.append("import json")
         code.append(f"print(':::' + json.dumps({func_name}(**{kwarg_decode})))")
 
-        output = DeviceMicroPythonProcess(config=self.config, mount_path=str(mount_path)).run_code(code).decode()
+        output = (
+            DeviceMicroPythonProcess(config=self.config, mount_path=str(mount_path))
+            .run_code(code)
+            .decode()
+        )
         lines = output.splitlines()
         lines = [line[3:] for line in lines if line.startswith(":::")]
         output = lines[-1]

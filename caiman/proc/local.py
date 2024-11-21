@@ -1,7 +1,12 @@
 import subprocess
 import sys
 
-from caiman.proc.base import MicroPythonProcess, find_micropython_path, follow_subprocess, CommandError
+from caiman.proc.base import (
+    CommandError,
+    MicroPythonProcess,
+    find_micropython_path,
+    follow_subprocess,
+)
 
 
 class LocalMicroPythonProcess(MicroPythonProcess):

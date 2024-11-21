@@ -49,13 +49,9 @@ class InstallGoal(Goal):
 
         dep = Dependency(**kwargs)
         if command.scope == "dependencies":
-            installer = DependencyInstaller(
-                dependency=dep, config=self.config
-            )
+            installer = DependencyInstaller(dependency=dep, config=self.config)
         elif command.scope == "tools":
-            installer = ToolInstaller(
-                dependency=dep, config=self.config
-            )
+            installer = ToolInstaller(dependency=dep, config=self.config)
         else:
             raise ValueError(f"Invalid scope: {command.scope}")
         installer(force=command.reinstall, logger=self._logger)

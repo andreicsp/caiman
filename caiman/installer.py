@@ -2,14 +2,24 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from caiman.config import Dependency, Config
-from caiman.manifest import DependencyManifestRegistry, ManifestItem, Manifest, ToolManifestRegistry
+from caiman.config import Config, Dependency
+from caiman.manifest import (
+    DependencyManifestRegistry,
+    Manifest,
+    ManifestItem,
+    ToolManifestRegistry,
+)
 from caiman.proc.base import MicroPythonProcess
 from caiman.proc.local import LocalMicroPythonProcess
-from caiman.source import WorkspaceSource, WorkspaceDependencySource, WorkspaceToolSource
+from caiman.source import (
+    WorkspaceDependencySource,
+    WorkspaceSource,
+    WorkspaceToolSource,
+)
 from caiman.task import MIPTask, MoveTask
 
 _logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True, eq=True)
 class DependencyInstaller:
@@ -22,7 +32,10 @@ class DependencyInstaller:
 
     @property
     def artifact_root(self):
-        return self.workspace.get_artifact_path("dependencies") / self.dependency.package_name
+        return (
+            self.workspace.get_artifact_path("dependencies")
+            / self.dependency.package_name
+        )
 
     @property
     def install_root(self):
@@ -34,10 +47,16 @@ class DependencyInstaller:
 
     @property
     def source(self) -> WorkspaceSource:
-        return WorkspaceDependencySource(workspace=self.workspace, source=self.dependency)
+        return WorkspaceDependencySource(
+            workspace=self.workspace, source=self.dependency
+        )
 
     def create_manifest(self):
-        files = [p.relative_to(self.artifact_root) for p in Path(self.artifact_root).rglob("**/*") if p.is_file()]
+        files = [
+            p.relative_to(self.artifact_root)
+            for p in Path(self.artifact_root).rglob("**/*")
+            if p.is_file()
+        ]
         items = ManifestItem.from_paths(files, self.artifact_root)
         return Manifest(
             name=self.dependency.package_name,
@@ -79,12 +98,15 @@ class DependencyInstaller:
         logger = logger or _logger
         manifest = self.manifests.get(self.dependency.package_name)
         if manifest and manifest.version == self.dependency.version and not force:
-            logger.info(f"Dependency {self.dependency.name} ({self.dependency.version}) is already installed")
+            logger.info(
+                f"Dependency {self.dependency.name} ({self.dependency.version}) is already installed"
+            )
             return manifest
 
         for task in self.get_tasks():
             logger.info(f"{task}")
-            task(device=self.handler)
+            out = task(device=self.handler)
+            logger.info(out.decode())
 
         manifest = self.create_manifest()
         self.manifests.save(manifest)

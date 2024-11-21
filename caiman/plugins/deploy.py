@@ -5,8 +5,8 @@ from dataclasses import dataclass
 
 from caiman.config import Command, Config
 from caiman.device.fs import FileSystem
-from caiman.proc.device import DeviceMicroPythonProcess
 from caiman.plugins.base import Goal, Plugin
+from caiman.proc.device import DeviceMicroPythonProcess
 
 
 @dataclass

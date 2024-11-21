@@ -4,9 +4,15 @@ from pathlib import Path
 from typing import Iterator
 
 from caiman.config import Workspace
-from caiman.manifest import Manifest, SourceManifestRegistry, \
-    DependencyManifestRegistry, ToolManifestRegistry, ResourceManifestRegistry, ManifestItem
-from caiman.task import Task, CopyTask, CompileTask
+from caiman.manifest import (
+    DependencyManifestRegistry,
+    Manifest,
+    ManifestItem,
+    ResourceManifestRegistry,
+    SourceManifestRegistry,
+    ToolManifestRegistry,
+)
+from caiman.task import CompileTask, CopyTask, Task
 
 _logger = logging.getLogger(__name__)
 
@@ -37,7 +43,7 @@ class Deployment:
         Generator for the source and target file paths."""
         for source_item in self.source_manifest.items:
             source_path = self.source_path / source_item.path
-            
+
             target_path = self.path / Path(source_item.path)
             if target_path.suffix == ".py" and self.compile:
                 target_path = target_path.with_suffix(".mpy")
@@ -73,7 +79,6 @@ class Deployment:
             version=self.source_manifest.version,
             items=items,
         )
-
 
 
 @dataclass(frozen=True, eq=True)

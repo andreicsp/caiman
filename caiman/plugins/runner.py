@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from caiman.config import Command
-from caiman.proc.device import DeviceMicroPythonProcess
 from caiman.plugins.base import Goal, Plugin, param
+from caiman.proc.device import DeviceMicroPythonProcess
 
 
 @dataclass
