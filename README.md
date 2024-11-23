@@ -219,5 +219,5 @@ caiman --silent cat --target=/boot.py
 ### Run a file on the device
 
 ```bash
-caiman run --target=/boot.py
+caiman run --target=boot
 ```
