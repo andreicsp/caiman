@@ -1,3 +1,6 @@
+"""
+Wrappers for package managers to install dependencies and tools
+"""
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +26,9 @@ _logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, eq=True)
 class DependencyInstaller:
+    """
+    Models a dependency installation process
+    """
     config: Config
     dependency: Dependency
 
@@ -32,6 +38,10 @@ class DependencyInstaller:
 
     @property
     def artifact_root(self):
+        """
+        Dependency files initially installed to a temporary artifact directory
+        that is later scanned for building a manifest of the installed files
+        """
         return (
             self.workspace.get_artifact_path("dependencies")
             / self.dependency.package_name
@@ -39,19 +49,33 @@ class DependencyInstaller:
 
     @property
     def install_root(self):
+        """
+        Local package installation directory where installed artifacts are moved
+        after a manifest is created
+        """
         return self.workspace.get_package_path()
 
     @property
     def manifests(self):
+        """
+        The manifest registry for the installed dependencies
+        """
         return DependencyManifestRegistry(workspace=self.workspace, asset_type="source")
 
     @property
     def source(self) -> WorkspaceSource:
+        """
+        Models the sources of the installed dependency
+        """
         return WorkspaceDependencySource(
             workspace=self.workspace, source=self.dependency
         )
 
     def create_manifest(self):
+        """
+        Scans the artifact directory where the dependency was installed to create a manifest
+        that will be used to track the installed files and copy them to the local package directory
+        """
         files = [
             p.relative_to(self.artifact_root)
             for p in Path(self.artifact_root).rglob("**/*")
@@ -65,6 +89,10 @@ class DependencyInstaller:
         )
 
     def get_tasks(self):
+        """
+        Get the tasks for installing the dependency.
+        These will include a package installation task for each asset in the dependency
+        """
         channel = self.config.get_channel(self.dependency.channel)
 
         install_names = (
@@ -92,9 +120,20 @@ class DependencyInstaller:
 
     @property
     def handler(self) -> MicroPythonProcess:
+        """
+        The handler for the MicroPython package manager used to install the dependency
+        """
         return LocalMicroPythonProcess()
 
     def install(self, force=False, logger=None):
+        """
+        Install the dependency.
+        A manifest is created for the installed files and saved to the manifest registry
+        The installed files are then moved to the local package directory
+
+        :param force: Force the installation even if the dependency is already installed
+        :param logger: The logger to use for logging installation output
+        """
         logger = logger or _logger
         manifest = self.manifests.get(self.dependency.package_name)
         if manifest and manifest.version == self.dependency.version and not force:
@@ -133,6 +172,10 @@ class DependencyInstaller:
 
 @dataclass(frozen=True, eq=True)
 class ToolInstaller(DependencyInstaller):
+    """
+    Models a tool installation process
+    Tools are only installed to the tools directory and are not uploaded to the device
+    """
     @property
     def artifact_root(self):
         return self.workspace.get_artifact_path("tools") / self.dependency.package_name

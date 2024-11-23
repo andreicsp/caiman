@@ -1,5 +1,5 @@
 """
-Plugins for installing dependencies and tools on the target device
+Plugins for installing dependencies and tools using package managers
 """
 from dataclasses import dataclass
 

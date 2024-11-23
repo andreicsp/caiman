@@ -1,5 +1,5 @@
 """
-Run file system operations on the device.
+APIs for interacting with the device from the host
 """
 import json
 from pathlib import Path
@@ -36,6 +36,9 @@ class FileSystem:
         return self.device.run_vfs_python_func(fs.rmtree, parent=path)
 
     def upload(self, src, dst, cwd=None):
+        """
+        Upload a file or directory to the device.
+        """
         cmd = ["fs", "cp"]
         full_src = Path(src) if cwd is None else Path(cwd) / src
         if full_src.is_dir():
@@ -47,6 +50,9 @@ class FileSystem:
         return self.device.run_mp_remote_cmd(*cmd, cwd=cwd)
 
     def mkdir(self, path):
+        """
+        Create the given path on the device.
+        """
         parts = path.split("/")
         for i in range(1, len(parts)):
             subpath = "/".join(parts[: i + 1])
@@ -57,9 +63,15 @@ class FileSystem:
                 pass
 
     def get_file_contents(self, file_path):
+        """
+        Get the contents of a file on the device.
+        """
         return self.device.run_mp_remote_cmd("cat", file_path)
 
     def get_json(self, file_path, ignore_missing=False):
+        """
+        Get the contents of a file on the device as a JSON object
+        """
         try:
             contents = self.get_file_contents(file_path)
         except CommandError as e:

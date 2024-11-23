@@ -47,7 +47,6 @@ class DeviceMicroPythonProcess(MicroPythonProcess):
         out, err = proc.communicate()
         if proc.returncode != 0:
             raise CommandError(cmd[-1], stdout=out, stderr=err)
-
         return out
 
     def run_code(self, code, follow=False):

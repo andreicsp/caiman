@@ -1,3 +1,6 @@
+"""
+Plugin with goals to build dependencies, tools, sources, and resources.
+"""
 import logging
 import shutil
 from abc import ABC, abstractmethod
@@ -12,21 +15,37 @@ from caiman.source import WorkspacePythonSource, WorkspaceSource
 
 @dataclass
 class BuildCommand:
+    """
+    Defines the schema for the build command.
+    """
     target: str = param("Target to build", default="")
     force: bool = param("Force build", default=False)
 
     @property
     def builder(self):
+        """
+        Return the builder name from the target
+        """
         return self.target.split(":", 1)[0] if self.target else None
 
     @property
     def buildable(self):
+        """
+        Return the buildable name from the target
+        """
         parts = self.target.split(":", 1)
         return self.target.split(":", 1)[1] if len(parts) > 1 else None
 
 
 class Builder(ABC):
+    """
+    Base class for building sources.
+    """
     def __init__(self, config: Config):
+        """
+        Initialize the builder with the given project configuration.
+        :param config: The project configuration
+        """
         self.config = config
         self._logger = logging.getLogger(f"build:{self.name}")
 
@@ -39,6 +58,10 @@ class Builder(ABC):
         yield from []
 
     def get_command_buildables(self, command: BuildCommand):
+        """
+        Return the buildables for the given command by filtering all the
+        buildables by the target and buildable name.
+        """
         if command.buildable:
             return [
                 buildable
@@ -54,6 +77,10 @@ class Builder(ABC):
         """
 
     def __call__(self, command: BuildCommand):
+        """
+        Execute the build command.
+        :param command: The build command derived from the command line arguments
+        """
         buildables = self.get_command_buildables(command)
         if not buildables:
             if not command.builder:
@@ -71,6 +98,9 @@ class Builder(ABC):
 
 
 class ResourceBuilder(Builder):
+    """
+    Builder for building resources.
+    """
     @property
     def name(self):
         return "resources"
@@ -83,6 +113,9 @@ class ResourceBuilder(Builder):
         ]
 
     def _build(self, source: WorkspaceSource, command: BuildCommand):
+        """
+        Build the given resource.
+        """
         self._logger.info(f"Building {source.source.name}")
         source.manifests.save(source.create_manifest())
         deployment = source.create_deployment()
@@ -92,6 +125,9 @@ class ResourceBuilder(Builder):
 
 
 class SourceBuilder(ResourceBuilder):
+    """
+    Builder for building Python sources.
+    """
     @property
     def name(self):
         return "sources"
@@ -105,6 +141,9 @@ class SourceBuilder(ResourceBuilder):
 
 
 class DependencyBuilder(SourceBuilder):
+    """
+    Builder for installing dependencies.
+    """
     @property
     def name(self):
         return "dependencies"
@@ -121,6 +160,9 @@ class DependencyBuilder(SourceBuilder):
 
 
 class ToolBuilder(DependencyBuilder):
+    """
+    Builder for installing tools.
+    """
     @property
     def name(self):
         return "tools"
@@ -134,6 +176,9 @@ class ToolBuilder(DependencyBuilder):
 
 
 class BuildGoal(Goal):
+    """
+    Goal for building dependencies, tools, sources, and resources.
+    """
     @property
     def help(self):
         return "Build dependencies, tools, sources, and resources"
@@ -180,5 +225,8 @@ class BuildGoal(Goal):
 
 
 class ApplicationBuilderPlugin(Plugin):
+    """
+    Plugin for building dependencies, tools, sources, and resources.
+    """
     def get_goals(self) -> Tuple[Goal]:
         return (BuildGoal(self.config),)

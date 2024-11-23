@@ -3,6 +3,8 @@ name = "caiman"
 version = "0.1.0"
 description = "A build system for MicroPython projects"
 authors = ["Andrei Dumitrache <andrei@dumitrache.net>"]
+homepage = "https://github.com/andreicsp/caiman"
+repository = "https://github.com/andreicsp/caiman"
 license = "MIT"
 readme = "README.md"
 

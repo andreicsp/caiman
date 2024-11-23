@@ -1,5 +1,5 @@
 """
-Module for defining the target artifacts and sources for a workspace.
+Classes to model sources of build targets in a workspace.
 """
 
 from dataclasses import dataclass

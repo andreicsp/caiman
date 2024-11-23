@@ -1,3 +1,7 @@
+"""
+Models deployments of source files and locally installed dependencies to the build directory
+for future deployment to a target device.
+"""
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +23,9 @@ _logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, eq=True)
 class Deployment:
+    """
+    Models a deployment of source files and locally installed dependencies to the build directory
+    """
     source_path: Path
     source_manifest: Manifest
     workspace: Workspace
@@ -27,6 +34,9 @@ class Deployment:
 
     @property
     def manifests(self):
+        """
+        The manifest registry for the deployed files
+        """
         return ResourceManifestRegistry(
             workspace=self.workspace,
             asset_type="target",
@@ -83,6 +93,9 @@ class Deployment:
 
 @dataclass(frozen=True, eq=True)
 class PythonDeployment(Deployment):
+    """
+    Models a deployment of Python source files to the build directory
+    """
     @property
     def manifests(self):
         return SourceManifestRegistry(
@@ -93,6 +106,9 @@ class PythonDeployment(Deployment):
 
 @dataclass(frozen=True, eq=True)
 class DependencyDeployment(Deployment):
+    """
+    Models a deployment of locally installed dependencies to the build directory
+    """
     @property
     def manifests(self):
         return DependencyManifestRegistry(
@@ -103,6 +119,9 @@ class DependencyDeployment(Deployment):
 
 @dataclass(frozen=True, eq=True)
 class ToolDeployment(Deployment):
+    """
+    Models a deployment of tool files to the tools directory
+    """
     @property
     def manifests(self):
         return ToolManifestRegistry(

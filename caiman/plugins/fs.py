@@ -2,7 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 
 from caiman.config import Command
-from caiman.device.fs import FileSystem
+from caiman.device import FileSystem
 from caiman.plugins.base import Goal, Plugin, param
 from caiman.proc.device import DeviceMicroPythonProcess
 

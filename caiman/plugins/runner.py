@@ -33,7 +33,7 @@ class RunnerGoal(Goal):
 class RunnerPlugin(Plugin):
     def __init__(self, config):
         super().__init__(config)
-        self._device = DeviceMicroPythonProcess(config=config)
+        self._device = DeviceMicroPythonProcess(config=config.device)
 
     def get_goals(self):
         return (RunnerGoal(device=self._device),)

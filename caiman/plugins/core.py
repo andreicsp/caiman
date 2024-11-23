@@ -1,3 +1,7 @@
+"""
+Core plugin provider for Caiman.
+Provides the core plugins for the build tool.
+"""
 from caiman.plugins.base import PluginProvider
 from caiman.plugins.workspace import WorkspacePlugin
 
