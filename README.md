@@ -147,7 +147,7 @@ dependencies:
       - protobuf/uprotobuf.py
 ```
 
-This will only install the specified files from the `micropySX126X` github repository.
+This will only install the specified files from the `uprotobuf` github repository.
 
 ## Defining tools
 
